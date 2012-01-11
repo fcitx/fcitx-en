@@ -49,9 +49,10 @@ typedef struct _FcitxEn {
     FcitxEnConfig config;
     FcitxInstance* owner;
     Hunhandle * context;
-    char buf[1024]; //might overflow
+    char * buf;
     int len;
     int cur;
+    int chooseMode;
 } FcitxEn;
 
 CONFIG_BINDING_DECLARE(FcitxEnConfig);

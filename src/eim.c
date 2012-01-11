@@ -55,6 +55,7 @@ static boolean LoadEnConfig(FcitxEnConfig* fs);
 static void SaveEnConfig(FcitxEnConfig* fs);
 static void ConfigEn(FcitxEn* en);
 
+
 /**
  * @brief initialize the extra input method
  *
@@ -74,13 +75,15 @@ void* FcitxEnCreate(FcitxInstance* instance)
     
     bindtextdomain("fcitx-en", LOCALEDIR);
 
-    en->context = Hunspell_create("/usr/share/hunspell/en_US.aff", "/usr/share/hunspell/en_US.dic");
-    if (en-> context == NULL)
+    Hunhandle * hh = Hunspell_create("/usr/share/hunspell/en_US.aff", "/usr/share/hunspell/en_US.dic");
+    if (hh == NULL)
 		return NULL;
+	en->context = hh;
     en->owner = instance;
     en->len = 0;
     en->cur = 0;
-    en->buf[0] = '\0';
+    en->chooseMode = 0;
+    en->buf = strdup("");
     FcitxCandidateWordSetPageSize(FcitxInputStateGetCandidateList(input), config->iMaxCandWord);
     LoadEnConfig(&en->config);
     ConfigEn(en);
@@ -118,39 +121,47 @@ INPUT_RETURN_VALUE FcitxEnDoInput(void* arg, FcitxKeySym sym, unsigned int state
 {
     FcitxEn* en = (FcitxEn*) arg;
     FcitxInputState *input = FcitxInstanceGetInputState(en->owner);
-    // not alpha and buf len is zero
-    if (! FcitxHotkeyIsHotKeyLAZ(sym, state) && strlen(en->buf) <= 0 )
+    // not alpha and buf len is zero and (not digit and no candword)
+    if (! (FcitxHotkeyIsHotKeyLAZ(sym, state) || 
+      (FcitxHotkeyIsHotKeyDigit(sym, state) && FcitxCandidateWordGetListSize(FcitxInputStateGetCandidateList(input)) == 0)) && strlen(en->buf) <= 0 )
 		return IRV_TO_PROCESS;
+	
+	en->chooseMode = 0; // always not in mode
 
-    if (FcitxHotkeyIsHotKeyLAZ(sym, state)) {
+    if (FcitxHotkeyIsHotKeyLAZ(sym, state) || 
+      (FcitxHotkeyIsHotKeyDigit(sym, state) && FcitxCandidateWordGetListSize(FcitxInputStateGetCandidateList(input)) == 0)) {
 		char in = (char) sym & 0xff;
 		char * half1 = strndup(en->buf, en->cur);
 		char * half2 = strdup(en->buf+en->cur);
+		en->buf = realloc(en->buf, en->len+2);
 		sprintf(en->buf, "%s%c%s", half1, in, half2);
-		en->len++;
-		en->cur++;
+		en->len++; en->cur++;
 		free(half1); free(half2);
     } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_BACKSPACE)) {
 		if (en->cur>0) {
 			char * half1 = strndup(en->buf, en->cur-1);
 			char * half2 = strdup(en->buf+en->cur);
+			en->buf = realloc(en->buf, en->len);
 			sprintf(en->buf, "%s%s", half1, half2);
-			en->len--;
-			en->cur--;
+			en->len--; en->cur--;
 			free(half1); free(half2);
 		}
     } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_DELETE)) {
 		if (en->cur < en->len) {
 			char * half1 = strndup(en->buf, en->cur);
 			char * half2 = strdup(en->buf+en->cur+1);
+			en->buf = realloc(en->buf, en->len);
 			sprintf(en->buf, "%s%s", half1, half2);
 			en->len--;
 			free(half1); free(half2);
 		}
-    } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_SPACE) || FcitxHotkeyIsHotKey(sym, state, FCITX_ENTER) ) {
-		sprintf(en->buf, "%s ", en->buf);
-        strcpy(FcitxInputStateGetOutputString(input), en->buf);
-        return IRV_COMMIT_STRING;
+    } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_SPACE)) {
+		if (FcitxCandidateWordGetListSize(FcitxInputStateGetCandidateList(input)) == 0) {
+			en->chooseMode = 1;
+		} else {
+			strcpy(FcitxInputStateGetOutputString(input), en->buf);
+			return IRV_COMMIT_STRING;
+		}
     } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_RIGHT)) {
         if (en->cur < en->len)
            en->cur++;
@@ -160,7 +171,6 @@ INPUT_RETURN_VALUE FcitxEnDoInput(void* arg, FcitxKeySym sym, unsigned int state
     } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_ESCAPE)) {
 		return IRV_CLEAN;
     } else {
-        // to do: more en_handle
         return IRV_TO_PROCESS;
     }
     return IRV_DISPLAY_CANDWORDS;
@@ -180,9 +190,10 @@ __EXPORT_API
 void FcitxEnReset(void* arg)
 {
     FcitxEn* en = (FcitxEn*) arg;
-    en->buf[0] = '\0';
-    en->len=en->cur=0;
-    // todo
+    en->len= en->cur = 0;
+    free(en->buf);
+    en->buf = strdup("");
+    en->chooseMode = 0;
 }
 
 
@@ -210,22 +221,23 @@ INPUT_RETURN_VALUE FcitxEnGetCandWords(void* arg)
 
     FcitxLog(DEBUG, "buf: %s", en->buf);
 
-	int index = 0;
-	char ** candList;
-	int candNum = Hunspell_suggest(en->context, &candList, en->buf);
-	while (index < candNum) {
-		FcitxCandidateWord cw;
-		cw.callback = FcitxEnGetCandWord;
-		cw.owner = en;
-		cw.priv = NULL;
-		cw.strExtra = NULL;
-		cw.strWord = strdup(candList[index]);
-		cw.wordType = MSG_OTHER;
-		FcitxCandidateWordAppend(FcitxInputStateGetCandidateList(input), &cw);
-		index ++;
-	}
-	Hunspell_free_list(en->context, &candList, candNum);
-
+	if(en->chooseMode) {
+		int index = 0;
+		char ** candList;
+		int candNum = Hunspell_suggest(en->context, &candList, en->buf);
+		while (index < candNum) {
+			FcitxCandidateWord cw;
+			cw.callback = FcitxEnGetCandWord;
+			cw.owner = en;
+			cw.priv = NULL;
+			cw.strExtra = NULL;
+			cw.strWord = strdup(candList[index]);
+			cw.wordType = MSG_OTHER;
+			FcitxCandidateWordAppend(FcitxInputStateGetCandidateList(input), &cw);
+			index ++;
+		}
+		Hunspell_free_list(en->context, &candList, candNum);
+    }
     // setup cursor
     FcitxInputStateSetShowCursor(input, true);
     FcitxLog(DEBUG, "buf len: %d, cur: %d", en->len, en->cur);
@@ -243,8 +255,7 @@ INPUT_RETURN_VALUE FcitxEnGetCandWord(void* arg, FcitxCandidateWord* candWord)
     FcitxEn* en = (FcitxEn*) candWord->owner;
     FcitxInputState *input = FcitxInstanceGetInputState(en->owner);
 	FcitxLog(DEBUG, "selected candword: %s", candWord->strWord);
-	sprintf(en->buf, "%s ", candWord->strWord);
-	strcpy(FcitxInputStateGetOutputString(input), en->buf);
+	strcpy(FcitxInputStateGetOutputString(input), candWord->strWord);
 	return IRV_COMMIT_STRING;
 }
 
