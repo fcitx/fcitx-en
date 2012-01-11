@@ -1,0 +1,9 @@
+[Addon]
+Name=fcitx-en
+_GeneralName=En
+_Comment=Easy English For Fcitx
+Category=InputMethod
+Enabled=True
+Library=fcitx-en.so
+Type=SharedLibrary
+IMRegisterMethod=ConfigFile

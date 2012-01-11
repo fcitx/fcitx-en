@@ -1,0 +1,6 @@
+fcitx_add_addon_conf_file(fcitx-en.conf)
+fcitx_add_configdesc_file(fcitx-en.desc)
+fcitx_add_inputmethod_conf_file(en.conf)
+install(FILES en.png DESTINATION share/fcitx/skin/default/)
+install(FILES en.png DESTINATION share/fcitx/skin/classic/)
+install(FILES en.png DESTINATION share/fcitx/skin/dark/)
