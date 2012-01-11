@@ -49,7 +49,7 @@ typedef struct _FcitxEn {
     FcitxEnConfig config;
     FcitxInstance* owner;
     Hunhandle * context;
-    char * buf;
+    char buf[1024]; //might overflow
     int len;
     int cur;
 } FcitxEn;

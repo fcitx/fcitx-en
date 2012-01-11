@@ -75,10 +75,12 @@ void* FcitxEnCreate(FcitxInstance* instance)
     bindtextdomain("fcitx-en", LOCALEDIR);
 
     en->context = Hunspell_create("/usr/share/hunspell/en_US.aff", "/usr/share/hunspell/en_US.dic");
+    if (en-> context == NULL)
+		return NULL;
     en->owner = instance;
     en->len = 0;
     en->cur = 0;
-    en->buf = strdup("");
+    en->buf[0] = '\0';
     FcitxCandidateWordSetPageSize(FcitxInputStateGetCandidateList(input), config->iMaxCandWord);
     LoadEnConfig(&en->config);
     ConfigEn(en);
@@ -127,9 +129,7 @@ INPUT_RETURN_VALUE FcitxEnDoInput(void* arg, FcitxKeySym sym, unsigned int state
 		sprintf(en->buf, "%s%c%s", half1, in, half2);
 		en->len++;
 		en->cur++;
-	} else if (FcitxHotkeyIsHotKeyDigit(sym, state)) {
-		return FcitxCandidateWordChooseByIndex(FcitxInputStateGetCandidateList(input), 0);
-    
+		free(half1); free(half2);
     } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_BACKSPACE)) {
 		if (en->cur>0) {
 			char * half1 = strndup(en->buf, en->cur-1);
@@ -137,6 +137,7 @@ INPUT_RETURN_VALUE FcitxEnDoInput(void* arg, FcitxKeySym sym, unsigned int state
 			sprintf(en->buf, "%s%s", half1, half2);
 			en->len--;
 			en->cur--;
+			free(half1); free(half2);
 		}
     } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_DELETE)) {
 		if (en->cur < en->len) {
@@ -144,8 +145,10 @@ INPUT_RETURN_VALUE FcitxEnDoInput(void* arg, FcitxKeySym sym, unsigned int state
 			char * half2 = strdup(en->buf+en->cur+1);
 			sprintf(en->buf, "%s%s", half1, half2);
 			en->len--;
+			free(half1); free(half2);
 		}
-    } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_SPACE)) {
+    } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_SPACE) || FcitxHotkeyIsHotKey(sym, state, FCITX_ENTER) ) {
+		sprintf(en->buf, "%s ", en->buf);
         strcpy(FcitxInputStateGetOutputString(input), en->buf);
         return IRV_COMMIT_STRING;
     } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_RIGHT)) {
@@ -175,7 +178,7 @@ __EXPORT_API
 void FcitxEnReset(void* arg)
 {
     FcitxEn* en = (FcitxEn*) arg;
-    en->buf = strdup("");
+    en->buf[0] = '\0';
     en->len=en->cur=0;
     // todo
 }
@@ -227,7 +230,6 @@ INPUT_RETURN_VALUE FcitxEnGetCandWords(void* arg)
     FcitxInputStateSetCursorPos(input, en->cur);
     FcitxInputStateSetClientCursorPos(input, en->cur);
 
-    // insert zuin in the middle
     FcitxMessagesAddMessageAtLast(msgPreedit, MSG_INPUT, "%s", en->buf);
     FcitxMessagesAddMessageAtLast(clientPreedit, MSG_INPUT, "%s", en->buf);
 
@@ -239,9 +241,9 @@ INPUT_RETURN_VALUE FcitxEnGetCandWord(void* arg, FcitxCandidateWord* candWord)
     FcitxEn* en = (FcitxEn*) candWord->owner;
     FcitxInputState *input = FcitxInstanceGetInputState(en->owner);
 	FcitxLog(DEBUG, "selected candword: %s", candWord->strWord);
-	en->buf = strdup(candWord->strWord);
-	en->len=en->cur=strlen(candWord->strWord);
-    return IRV_DISPLAY_CANDWORDS;
+	sprintf(en->buf, "%s ", candWord->strWord);
+	strcpy(FcitxInputStateGetOutputString(input), en->buf);
+	return IRV_COMMIT_STRING;
 }
 
 
