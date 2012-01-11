@@ -125,8 +125,6 @@ INPUT_RETURN_VALUE FcitxEnDoInput(void* arg, FcitxKeySym sym, unsigned int state
     if (! (FcitxHotkeyIsHotKeyLAZ(sym, state) || 
       (FcitxHotkeyIsHotKeyDigit(sym, state) && FcitxCandidateWordGetListSize(FcitxInputStateGetCandidateList(input)) == 0)) && strlen(en->buf) <= 0 )
 		return IRV_TO_PROCESS;
-	
-	en->chooseMode = 0; // always not in mode
 
     if (FcitxHotkeyIsHotKeyLAZ(sym, state) || 
       (FcitxHotkeyIsHotKeyDigit(sym, state) && FcitxCandidateWordGetListSize(FcitxInputStateGetCandidateList(input)) == 0)) {
@@ -137,6 +135,7 @@ INPUT_RETURN_VALUE FcitxEnDoInput(void* arg, FcitxKeySym sym, unsigned int state
 		sprintf(en->buf, "%s%c%s", half1, in, half2);
 		en->len++; en->cur++;
 		free(half1); free(half2);
+		en->chooseMode = 0;
     } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_BACKSPACE)) {
 		if (en->cur>0) {
 			char * half1 = strndup(en->buf, en->cur-1);
@@ -146,6 +145,7 @@ INPUT_RETURN_VALUE FcitxEnDoInput(void* arg, FcitxKeySym sym, unsigned int state
 			en->len--; en->cur--;
 			free(half1); free(half2);
 		}
+		en->chooseMode = 0;
     } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_DELETE)) {
 		if (en->cur < en->len) {
 			char * half1 = strndup(en->buf, en->cur);
@@ -155,19 +155,19 @@ INPUT_RETURN_VALUE FcitxEnDoInput(void* arg, FcitxKeySym sym, unsigned int state
 			en->len--;
 			free(half1); free(half2);
 		}
+		en->chooseMode = 0;
     } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_SPACE)) {
-		if (FcitxCandidateWordGetListSize(FcitxInputStateGetCandidateList(input)) == 0) {
+		FcitxLog(DEBUG, "list size: %d", FcitxCandidateWordGetListSize(FcitxInputStateGetCandidateList(input)));
+		if (en->chooseMode == 0) {
 			en->chooseMode = 1;
 		} else {
 			strcpy(FcitxInputStateGetOutputString(input), en->buf);
 			return IRV_COMMIT_STRING;
 		}
-    } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_RIGHT)) {
-        if (en->cur < en->len)
-           en->cur++;
-    } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_LEFT)) {
-        if (en->cur > 0)
-           en->cur--;
+    } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_RIGHT) && en->cur < en->len && FcitxCandidateWordGetListSize(FcitxInputStateGetCandidateList(input)) == 0) {
+        en->cur++;
+    } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_LEFT) && en->cur > 0 && FcitxCandidateWordGetListSize(FcitxInputStateGetCandidateList(input)) == 0) {
+        en->cur--;
     } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_ESCAPE)) {
 		return IRV_CLEAN;
     } else {
