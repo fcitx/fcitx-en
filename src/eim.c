@@ -55,10 +55,6 @@ static boolean LoadEnConfig(FcitxEnConfig* fs);
 static void SaveEnConfig(FcitxEnConfig* fs);
 static void ConfigEn(FcitxEn* en);
 
-typedef struct _EnCandWord {
-    int index;
-} EnCandWord;
-
 /**
  * @brief initialize the extra input method
  *
@@ -125,18 +121,14 @@ INPUT_RETURN_VALUE FcitxEnDoInput(void* arg, FcitxKeySym sym, unsigned int state
 		return IRV_TO_PROCESS;
 
     if (FcitxHotkeyIsHotKeyLAZ(sym, state)) {
-		char in_c = (char) sym & 0xff;
+		char in = (char) sym & 0xff;
 		char * half1 = strndup(en->buf, en->cur);
 		char * half2 = strdup(en->buf+en->cur);
-		sprintf(en->buf, "%s%c%s", half1, in_c, half2);
+		sprintf(en->buf, "%s%c%s", half1, in, half2);
 		en->len++;
 		en->cur++;
-	} else if (FcitxCandidateWordGetListSize(FcitxInputStateGetCandidateList(input)) > 0
-        && FcitxHotkeyIsHotKeyDigit(sym, state)) {
-		int in_c = (int) sym & 0xff;
-		FcitxCandidateWord * cw = FcitxCandidateWordGetByIndex(FcitxInputStateGetCandidateList(input), in_c);
-		en->buf = strdup(cw->strWord);
-		en->len = en->cur = strlen(cw->strWord);
+	} else if (FcitxHotkeyIsHotKeyDigit(sym, state)) {
+		return FcitxCandidateWordChooseByIndex(FcitxInputStateGetCandidateList(input), 0);
     
     } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_BACKSPACE)) {
 		if (en->cur>0) {
@@ -218,11 +210,9 @@ INPUT_RETURN_VALUE FcitxEnGetCandWords(void* arg)
 	int candNum = Hunspell_suggest(en->context, &candList, en->buf);
 	while (index < candNum) {
 		FcitxCandidateWord cw;
-		EnCandWord* w = (EnCandWord*) fcitx_utils_malloc0(sizeof(EnCandWord));
-		w->index = index;
 		cw.callback = FcitxEnGetCandWord;
 		cw.owner = en;
-		cw.priv = w;
+		cw.priv = NULL;
 		cw.strExtra = NULL;
 		cw.strWord = strdup(candList[index]);
 		cw.wordType = MSG_OTHER;
@@ -247,12 +237,10 @@ INPUT_RETURN_VALUE FcitxEnGetCandWords(void* arg)
 INPUT_RETURN_VALUE FcitxEnGetCandWord(void* arg, FcitxCandidateWord* candWord)
 {
     FcitxEn* en = (FcitxEn*) candWord->owner;
-    EnCandWord* w = (EnCandWord*) candWord->priv;
-    FcitxGlobalConfig* config = FcitxInstanceGetGlobalConfig(en->owner);
     FcitxInputState *input = FcitxInstanceGetInputState(en->owner);
-    int page = w->index / config->iMaxCandWord;
-    int off = w->index % config->iMaxCandWord;
-    // todo
+	FcitxLog(DEBUG, "selected candword: %s", candWord->strWord);
+	en->buf = strdup(candWord->strWord);
+	en->len=en->cur=strlen(candWord->strWord);
     return IRV_DISPLAY_CANDWORDS;
 }
 
