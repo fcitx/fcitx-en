@@ -157,6 +157,8 @@ INPUT_RETURN_VALUE FcitxEnDoInput(void* arg, FcitxKeySym sym, unsigned int state
     } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_LEFT)) {
         if (en->cur > 0)
            en->cur--;
+    } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_ESCAPE)) {
+		return IRV_CLEAN;
     } else {
         // to do: more en_handle
         return IRV_TO_PROCESS;
