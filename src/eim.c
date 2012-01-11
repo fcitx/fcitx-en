@@ -158,7 +158,7 @@ INPUT_RETURN_VALUE FcitxEnDoInput(void* arg, FcitxKeySym sym, unsigned int state
 		en->chooseMode = 0;
     } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_SPACE)) {
 		FcitxLog(DEBUG, "list size: %d", FcitxCandidateWordGetListSize(FcitxInputStateGetCandidateList(input)));
-		if (en->chooseMode == 0) {
+		if (en->chooseMode == 0 && Hunspell_spell(en->context, en->buf) == 0) {
 			en->chooseMode = 1;
 		} else {
 			strcpy(FcitxInputStateGetOutputString(input), en->buf);
