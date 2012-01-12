@@ -131,9 +131,8 @@ INPUT_RETURN_VALUE FcitxEnDoInput(void* arg, FcitxKeySym sym, unsigned int state
 		en->len++; en->cur++;
 		free(half1); free(half2);
 		en->chooseMode = 0;
-	} else if (FcitxHotkeyIsHotKeyDigit(sym, state)) {
+	} else if (FcitxHotkeyIsHotKeyDigit(sym, state) && en->chooseMode == 1) {
 		// in choose mode
-		if (en->chooseMode == 1)
 			return IRV_TO_PROCESS;
     } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_BACKSPACE)) {
 		if (en->cur == 0) {
