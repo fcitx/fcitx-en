@@ -122,8 +122,7 @@ INPUT_RETURN_VALUE FcitxEnDoInput(void* arg, FcitxKeySym sym, unsigned int state
     FcitxEn* en = (FcitxEn*) arg;
     FcitxInputState *input = FcitxInstanceGetInputState(en->owner);
     // not alpha and buf len is zero and (not digit and no candword)
-    if (! (FcitxHotkeyIsHotKeyLAZ(sym, state) || 
-      (FcitxHotkeyIsHotKeyDigit(sym, state) && FcitxCandidateWordGetListSize(FcitxInputStateGetCandidateList(input)) == 0)) && strlen(en->buf) <= 0 )
+    if (!FcitxHotkeyIsHotKeySimple(sym, state) && strlen(en->buf) <= 0)
 		return IRV_TO_PROCESS;
 
     if (FcitxHotkeyIsHotKeyLAZ(sym, state) || 
@@ -156,20 +155,24 @@ INPUT_RETURN_VALUE FcitxEnDoInput(void* arg, FcitxKeySym sym, unsigned int state
 			free(half1); free(half2);
 		}
 		en->chooseMode = 0;
-    } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_SPACE)) {
-		FcitxLog(DEBUG, "list size: %d", FcitxCandidateWordGetListSize(FcitxInputStateGetCandidateList(input)));
-		if (en->chooseMode == 0 && Hunspell_spell(en->context, en->buf) == 0) {
-			en->chooseMode = 1;
-		} else {
-			strcpy(FcitxInputStateGetOutputString(input), en->buf);
-			return IRV_COMMIT_STRING;
-		}
     } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_RIGHT) && en->cur < en->len && FcitxCandidateWordGetListSize(FcitxInputStateGetCandidateList(input)) == 0) {
         en->cur++;
     } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_LEFT) && en->cur > 0 && FcitxCandidateWordGetListSize(FcitxInputStateGetCandidateList(input)) == 0) {
         en->cur--;
     } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_ESCAPE)) {
 		return IRV_CLEAN;
+	} else if (FcitxHotkeyIsHotKeySimple(sym, state)) {
+		if (en->chooseMode == 0 && Hunspell_spell(en->context, en->buf) == 0) {
+			en->chooseMode = 1;
+		} else {
+			if (en->chooseMode == 0) {
+				char in = (char) sym & 0xff;
+				en->buf = realloc(en->buf, en->len+2);
+				sprintf(en->buf, "%s%c", en->buf, in);
+			}
+			strcpy(FcitxInputStateGetOutputString(input), en->buf);
+			return IRV_COMMIT_STRING;
+		}
     } else {
         return IRV_TO_PROCESS;
     }
