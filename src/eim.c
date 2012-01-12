@@ -175,8 +175,10 @@ INPUT_RETURN_VALUE FcitxEnDoInput(void* arg, FcitxKeySym sym, unsigned int state
 			en->chooseMode = 0; // in chooseMode, cancel chooseMode
 		else
 			return IRV_CLEAN; // not in chooseMode, reset status
-	} else if (FcitxHotkeyIsHotKeySimple(sym, state) || 
-	    (FcitxHotkeyIsHotKey(sym, state, FCITX_ENTER) && en->len != 0)) {
+	} else if (FcitxHotkeyIsHotKeySimple(sym, state) || FcitxHotkeyIsHotKey(sym, state, FCITX_ENTER)) {
+		if (en->len == 0) {
+			return IRV_TO_PROCESS;
+		}
 		// sym is symbol, or enter, so it is the end of word
 		if (en->chooseMode == 0 && Hunspell_spell(en->context, en->buf) == 0) {
 			en->chooseMode = 1;
