@@ -16,16 +16,16 @@ if(HUNSPELL_INCLUDE_DIR AND HUNSPELL_LIBRARIES)
 endif(HUNSPELL_INCLUDE_DIR AND HUNSPELL_LIBRARIES)
 
 find_package(PkgConfig)
-pkg_check_modules(PC_HUNSPELL QUIET hunspell)
+pkg_check_modules(HUNSPELL QUIET hunspell)
 
 find_path(HUNSPELL_MAIN_INCLUDE_DIR
           NAMES hunspell.h
-          HINTS ${PC_HUNSPELL_INCLUDEDIR}
+          HINTS ${HUNSPELL_INCLUDEDIR}
           PATH_SUFFIXES hunspell)
 
 find_library(HUNSPELL_LIBRARIES
              NAMES hunspell
-             HINTS ${PC_HUNSPELL_LIBDIR})
+             HINTS ${HUNSPELL_LIBDIR})
 
 _pkgconfig_invoke("hunspell" HUNSPELL DATADIR "" "--variable=datadir")
 
