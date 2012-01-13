@@ -54,6 +54,7 @@ static void FcitxEnReloadConfig(void* arg);
 static boolean LoadEnConfig(FcitxEnConfig* fs);
 static void SaveEnConfig(FcitxEnConfig* fs);
 static void ConfigEn(FcitxEn* en);
+const FcitxHotkey FCITX_TAB[2] = {{NULL, FcitxKey_Tab, FcitxKeyState_None}, {NULL, FcitxKey_None, FcitxKeyState_None}};
 
 
 /**
@@ -122,7 +123,7 @@ INPUT_RETURN_VALUE FcitxEnDoInput(void* arg, FcitxKeySym sym, unsigned int state
     FcitxEn* en = (FcitxEn*) arg;
     FcitxInputState *input = FcitxInstanceGetInputState(en->owner);
 
-    if (FcitxHotkeyIsHotKeyLAZ(sym, state) || (FcitxHotkeyIsHotKeyDigit(sym, state)) && en->chooseMode == 0) {
+    if (FcitxHotkeyIsHotKeyLAZ(sym, state) || (FcitxHotkeyIsHotKeyDigit(sym, state) && en->chooseMode == 0)) {
 		char in = (char) sym & 0xff;
 		char * half1 = strndup(en->buf, en->cur);
 		char * half2 = strdup(en->buf+en->cur);
@@ -171,24 +172,25 @@ INPUT_RETURN_VALUE FcitxEnDoInput(void* arg, FcitxKeySym sym, unsigned int state
 		else
 			return IRV_TO_PROCESS;
     } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_ESCAPE)) {
+		return IRV_CLEAN; // not in chooseMode, reset status
+	} else if (FcitxHotkeyIsHotKey(sym, state, FCITX_TAB)) {
+		if (en->len == 0) {
+			return IRV_TO_PROCESS;
+		}
 		if (en->chooseMode == 1)
 			en->chooseMode = 0; // in chooseMode, cancel chooseMode
 		else
-			return IRV_CLEAN; // not in chooseMode, reset status
+			en->chooseMode = 1;
 	} else if (FcitxHotkeyIsHotKeySimple(sym, state) || FcitxHotkeyIsHotKey(sym, state, FCITX_ENTER)) {
 		if (en->len == 0) {
 			return IRV_TO_PROCESS;
 		}
 		// sym is symbol, or enter, so it is the end of word
-		if (en->chooseMode == 0 && Hunspell_spell(en->context, en->buf) == 0) {
-			en->chooseMode = 1;
-		} else {
-			char in = (char) sym & 0xff;
-			en->buf = realloc(en->buf, en->len+2);
-			sprintf(en->buf, "%s%c", en->buf, in);
-			strcpy(FcitxInputStateGetOutputString(input), en->buf);
-			return IRV_COMMIT_STRING;
-		}
+		char in = (char) sym & 0xff;
+		en->buf = realloc(en->buf, en->len+2);
+		sprintf(en->buf, "%s%c", en->buf, in);
+		strcpy(FcitxInputStateGetOutputString(input), en->buf);
+		return IRV_COMMIT_STRING;
     } else {
         return IRV_TO_PROCESS;
     }
