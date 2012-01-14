@@ -1,6 +1,6 @@
 /***************************************************************************
- *   Copyright (C) 2010~2010 by CSSlayer                                   *
- *   wengxt@gmail.com                                                      *
+ *   Copyright (C) 2012~2012 by Tai-Lin Chu                                *
+ *   tailinchu@gmail.com                                                   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *

@@ -55,6 +55,9 @@ static void ConfigEn(FcitxEn* en);
 static int en_prefix_suggest(const char * prefix, char *** cp);
 static void en_free_list(char *** cp, const int n);
 const FcitxHotkey FCITX_TAB[2] = {{NULL, FcitxKey_Tab, FcitxKeyState_None}, {NULL, FcitxKey_None, FcitxKeyState_None}};
+const FcitxHotkey FCITX_HYPHEN[2] = {{NULL, FcitxKey_minus, FcitxKeyState_None}, {NULL, FcitxKey_None, FcitxKeyState_None}};
+const FcitxHotkey FCITX_SLASH[2] = {{NULL, FcitxKey_slash, FcitxKeyState_None}, {NULL, FcitxKey_None, FcitxKeyState_None}};
+const FcitxHotkey FCITX_APOS[2] = {{NULL, FcitxKey_apostrophe, FcitxKeyState_None}, {NULL, FcitxKey_None, FcitxKeyState_None}};
 
 int en_prefix_suggest(const char * prefix, char *** cp)
 {
@@ -67,8 +70,8 @@ int en_prefix_suggest(const char * prefix, char *** cp)
 	int prefix_len = strlen(prefix);
 	while (fgets (line, 32, file) != NULL)
 	{
-		if (strncmp (prefix, line, prefix_len) == 0) {
-			line[strlen(line)-1] = '\0'; // remove newline
+		line[strlen(line)-1] = '\0'; // remove newline
+		if (strlen(line) > prefix_len && strncmp (prefix, line, prefix_len) == 0) {
 			char * word = strdup(line);
 			list_size ++;
 			candlist = realloc(candlist, list_size * sizeof (char *));
@@ -153,7 +156,11 @@ INPUT_RETURN_VALUE FcitxEnDoInput(void* arg, FcitxKeySym sym, unsigned int state
     FcitxEn* en = (FcitxEn*) arg;
     FcitxInputState *input = FcitxInstanceGetInputState(en->owner);
 
-    if (FcitxHotkeyIsHotKeyLAZ(sym, state) || (FcitxHotkeyIsHotKeyDigit(sym, state) && en->chooseMode == 0)) {
+    if (FcitxHotkeyIsHotKeyLAZ(sym, state) || 
+      FcitxHotkeyIsHotKey(sym, state, FCITX_HYPHEN) || 
+      FcitxHotkeyIsHotKey(sym, state, FCITX_SLASH) || 
+      FcitxHotkeyIsHotKey(sym, state, FCITX_APOS) || 
+      (FcitxHotkeyIsHotKeyDigit(sym, state) && en->chooseMode == 0)) {
 		char in = (char) sym & 0xff;
 		char * half1 = strndup(en->buf, en->cur);
 		char * half2 = strdup(en->buf+en->cur);
