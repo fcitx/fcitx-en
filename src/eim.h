@@ -24,7 +24,6 @@
 #include <fcitx/ime.h>
 #include <fcitx/instance.h>
 #include <fcitx/candidate.h>
-#include <hunspell/hunspell.h>
 
 #ifdef __cplusplus
 #define __EXPORT_API extern "C"
@@ -48,7 +47,6 @@ typedef struct _FcitxEnConfig {
 typedef struct _FcitxEn {
     FcitxEnConfig config;
     FcitxInstance* owner;
-    Hunhandle * context;
     char * buf;
     int len;
     int cur;

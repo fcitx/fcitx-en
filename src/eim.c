@@ -35,8 +35,6 @@
 #include <fcitx/ui.h>
 #include <libintl.h>
 
-#include <hunspell/hunspell.h>
-
 #include "config.h"
 #include "eim.h"
 
@@ -54,8 +52,44 @@ static void FcitxEnReloadConfig(void* arg);
 static boolean LoadEnConfig(FcitxEnConfig* fs);
 static void SaveEnConfig(FcitxEnConfig* fs);
 static void ConfigEn(FcitxEn* en);
+static int en_prefix_suggest(const char * prefix, char *** cp);
+static void en_free_list(char *** cp, const int n);
 const FcitxHotkey FCITX_TAB[2] = {{NULL, FcitxKey_Tab, FcitxKeyState_None}, {NULL, FcitxKey_None, FcitxKeyState_None}};
 
+int en_prefix_suggest(const char * prefix, char *** cp)
+{
+	FILE * file = fopen("/usr/local/share/fcitx/en_dic.txt", "r");
+	if (file == NULL)
+		return 0;
+	char line [32];
+	char ** candlist = malloc(0);
+	int list_size = 0;
+	int prefix_len = strlen(prefix);
+	while (fgets (line, 32, file) != NULL)
+	{
+		if (strncmp (prefix, line, prefix_len) == 0) {
+			line[strlen(line)-1] = '\0'; // remove newline
+			char * word = strdup(line);
+			list_size ++;
+			candlist = realloc(candlist, list_size * sizeof (char *));
+			candlist[list_size-1] = word;
+			if(list_size == 10)
+				break;
+		}
+	}
+	*cp = candlist;
+	return list_size;
+}
+
+static void en_free_list(char *** cp, const int n)
+{
+	char ** candlist = * cp;
+	int i;
+	for(i=0; i<n ; i++) {
+		free(candlist[i]);
+	}
+	free(candlist);
+}
 
 /**
  * @brief initialize the extra input method
@@ -76,10 +110,6 @@ void* FcitxEnCreate(FcitxInstance* instance)
     
     bindtextdomain("fcitx-en", LOCALEDIR);
 
-    Hunhandle * hh = Hunspell_create("/usr/share/hunspell/en_US.aff", "/usr/share/hunspell/en_US.dic");
-    if (hh == NULL)
-		return NULL;
-	en->context = hh;
     en->owner = instance;
     en->len = 0;
     en->cur = 0;
@@ -177,10 +207,10 @@ INPUT_RETURN_VALUE FcitxEnDoInput(void* arg, FcitxKeySym sym, unsigned int state
 		if (en->len == 0) {
 			return IRV_TO_PROCESS;
 		}
-		if (en->chooseMode == 1)
-			en->chooseMode = 0; // in chooseMode, cancel chooseMode
+		if (en->chooseMode == 0 && strlen(en->buf) >= 3)
+			en->chooseMode = 1; // in chooseMode, cancel chooseMode
 		else
-			en->chooseMode = 1;
+			en->chooseMode = 0;
 	} else if (FcitxHotkeyIsHotKeySimple(sym, state) || FcitxHotkeyIsHotKey(sym, state, FCITX_ENTER)) {
 		if (en->len == 0) {
 			return IRV_TO_PROCESS;
@@ -245,7 +275,7 @@ INPUT_RETURN_VALUE FcitxEnGetCandWords(void* arg)
 	if(en->chooseMode) {
 		int index = 0;
 		char ** candList;
-		int candNum = Hunspell_suggest(en->context, &candList, en->buf);
+		int candNum = en_prefix_suggest(en->buf, &candList);
 		while (index < candNum) {
 			FcitxCandidateWord cw;
 			cw.callback = FcitxEnGetCandWord;
@@ -257,7 +287,7 @@ INPUT_RETURN_VALUE FcitxEnGetCandWords(void* arg)
 			FcitxCandidateWordAppend(FcitxInputStateGetCandidateList(input), &cw);
 			index ++;
 		}
-		Hunspell_free_list(en->context, &candList, candNum);
+		en_free_list(&candList, candNum);
     }
     // setup cursor
     FcitxInputStateSetShowCursor(input, true);
@@ -290,7 +320,6 @@ __EXPORT_API
 void FcitxEnDestroy(void* arg)
 {
     FcitxEn* en = (FcitxEn*) arg;
-    Hunspell_destroy(en->context);
     free(en->buf);
     free(arg);
 }
@@ -334,6 +363,5 @@ void SaveEnConfig(FcitxEnConfig* fc)
 
 void ConfigEn(FcitxEn* en)
 {
-    Hunhandle* ctx = en->context;
     // none at the moment
 }
