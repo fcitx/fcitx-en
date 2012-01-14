@@ -214,7 +214,7 @@ INPUT_RETURN_VALUE FcitxEnDoInput(void* arg, FcitxKeySym sym, unsigned int state
 		if (en->len == 0) {
 			return IRV_TO_PROCESS;
 		}
-		if (en->chooseMode == 0 && strlen(en->buf) >= 3)
+		if (en->chooseMode == 0 && strlen(en->buf) >= 2)
 			en->chooseMode = 1; // in chooseMode, cancel chooseMode
 		else
 			en->chooseMode = 0;
