@@ -1,1 +1,1 @@
-
+#define EN_DIC_FILE "@CMAKE_INSTALL_PREFIX@/share/fcitx/data/en_dic.txt"

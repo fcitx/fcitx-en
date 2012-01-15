@@ -52,7 +52,7 @@ static void FcitxEnReloadConfig(void* arg);
 static boolean LoadEnConfig(FcitxEnConfig* fs);
 static void SaveEnConfig(FcitxEnConfig* fs);
 static void ConfigEn(FcitxEn* en);
-static int en_prefix_suggest(const char * prefix, char *** cp);
+static char ** en_prefix_suggest(const char * prefix, int * n);
 static void en_free_list(char *** cp, const int n);
 static char * en_prefix_hint(const char * prefix);
 const FcitxHotkey FCITX_TAB[2] = {{NULL, FcitxKey_Tab, FcitxKeyState_None}, {NULL, FcitxKey_None, FcitxKeyState_None}};
@@ -61,9 +61,9 @@ const FcitxHotkey FCITX_SLASH[2] = {{NULL, FcitxKey_slash, FcitxKeyState_None}, 
 const FcitxHotkey FCITX_APOS[2] = {{NULL, FcitxKey_apostrophe, FcitxKeyState_None}, {NULL, FcitxKey_None, FcitxKeyState_None}};
 const FcitxHotkey FCITX_GRAV[2] = {{NULL, FcitxKey_grave, FcitxKeyState_None}, {NULL, FcitxKey_None, FcitxKeyState_None}};
 
-int en_prefix_suggest(const char * prefix, char *** cp)
+char ** en_prefix_suggest(const char * prefix, int * n)
 {
-	FILE * file = fopen("/usr/local/share/fcitx/en_dic.txt", "r");
+	FILE * file = fopen(EN_DIC_FILE, "r");
 	if (file == NULL)
 		return 0;
 	char line [32];
@@ -82,13 +82,13 @@ int en_prefix_suggest(const char * prefix, char *** cp)
 				break;
 		}
 	}
-	*cp = candlist;
-	return list_size;
+	*n = list_size;
+	return candlist;
 }
 
 char * en_prefix_hint(const char * prefix)
 {
-	FILE * file = fopen("/usr/local/share/fcitx/en_dic.txt", "r");
+	FILE * file = fopen(EN_DIC_FILE, "r");
 	if (file == NULL)
 		return NULL;
 	char line [32];
@@ -320,8 +320,8 @@ INPUT_RETURN_VALUE FcitxEnGetCandWords(void* arg)
 
 	if(en->chooseMode) {
 		int index = 0;
-		char ** candList;
-		int candNum = en_prefix_suggest(en->buf, &candList);
+		int candNum;
+		char ** candList = en_prefix_suggest(en->buf, &candNum);
 		while (index < candNum) {
 			FcitxCandidateWord cw;
 			cw.callback = FcitxEnGetCandWord;
