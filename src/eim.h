@@ -44,9 +44,15 @@ typedef struct _FcitxEnConfig {
     FcitxGenericConfig config;
 } FcitxEnConfig;
 
+typedef struct _node {
+	char * word;
+	struct _node * next;
+} node;
+
 typedef struct _FcitxEn {
     FcitxEnConfig config;
     FcitxInstance* owner;
+    node * dic;
     char * buf;
     int cur;
     int chooseMode;

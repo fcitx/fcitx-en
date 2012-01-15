@@ -52,67 +52,11 @@ static void FcitxEnReloadConfig(void* arg);
 static boolean LoadEnConfig(FcitxEnConfig* fs);
 static void SaveEnConfig(FcitxEnConfig* fs);
 static void ConfigEn(FcitxEn* en);
-static char ** en_prefix_suggest(const char * prefix, int * n);
-static void en_free_list(char ** candlist, const int n);
-static char * en_prefix_hint(const char * prefix);
 const FcitxHotkey FCITX_TAB[2] = {{NULL, FcitxKey_Tab, FcitxKeyState_None}, {NULL, FcitxKey_None, FcitxKeyState_None}};
 const FcitxHotkey FCITX_HYPHEN[2] = {{NULL, FcitxKey_minus, FcitxKeyState_None}, {NULL, FcitxKey_None, FcitxKeyState_None}};
 const FcitxHotkey FCITX_SLASH[2] = {{NULL, FcitxKey_slash, FcitxKeyState_None}, {NULL, FcitxKey_None, FcitxKeyState_None}};
 const FcitxHotkey FCITX_APOS[2] = {{NULL, FcitxKey_apostrophe, FcitxKeyState_None}, {NULL, FcitxKey_None, FcitxKeyState_None}};
 const FcitxHotkey FCITX_GRAV[2] = {{NULL, FcitxKey_grave, FcitxKeyState_None}, {NULL, FcitxKey_None, FcitxKeyState_None}};
-
-char ** en_prefix_suggest(const char * prefix, int * n)
-{
-	FILE * file = fopen(EN_DIC_FILE, "r");
-	if (file == NULL) {
-		*n = 0;
-		return NULL;
-	}
-	char line [32];
-	char ** candlist = malloc(0);
-	int list_size = 0;
-	int prefix_len = strlen(prefix);
-	while (fgets (line, 32, file) != NULL)
-	{
-		line[strlen(line)-1] = '\0'; // remove newline
-		if (strlen(line) > prefix_len && strncmp (prefix, line, prefix_len) == 0) {
-			char * word = strdup(line);
-			list_size ++;
-			candlist = realloc(candlist, list_size * sizeof (char *));
-			candlist[list_size-1] = word;
-			if(list_size == 10)
-				break;
-		}
-	}
-	*n = list_size;
-	return candlist;
-}
-
-char * en_prefix_hint(const char * prefix)
-{
-	FILE * file = fopen(EN_DIC_FILE, "r");
-	if (file == NULL)
-		return NULL;
-	char line [32];
-	int prefix_len = strlen(prefix);
-	while (fgets (line, 32, file) != NULL)
-	{
-		line[strlen(line)-1] = '\0'; // remove newline
-		if (strlen(line) > prefix_len && strncmp (prefix, line, prefix_len) == 0) {
-			return strdup(line);
-		}
-	}
-	return NULL;
-}
-
-static void en_free_list(char ** candlist, const int n)
-{
-	int i;
-	for(i=0; i<n ; i++) {
-		free(candlist[i]);
-	}
-	free(candlist);
-}
 
 /**
  * @brief initialize the extra input method
@@ -133,6 +77,22 @@ void* FcitxEnCreate(FcitxInstance* instance)
     
     bindtextdomain("fcitx-en", LOCALEDIR);
 
+	//load dic
+	FILE * file = fopen(EN_DIC_FILE, "r");
+	if (file == NULL)
+		return NULL;
+	char line [32];
+	node ** tmp = &(en->dic);
+	while (fgets (line, 32, file) != NULL)
+	{
+		line[strlen(line)-1] = '\0'; // remove newline
+		*tmp = (node *) malloc(sizeof(node));
+		(*tmp)->word = strdup(line);
+		(*tmp)->next = NULL;
+		tmp = &((*tmp)->next);
+	}
+	
+	
     en->owner = instance;
     en->cur = 0;
     en->chooseMode = 0;
@@ -238,14 +198,15 @@ INPUT_RETURN_VALUE FcitxEnDoInput(void* arg, FcitxKeySym sym, unsigned int state
 			if (en->chooseMode == 0)
 				en->chooseMode = 1; // in chooseMode, cancel chooseMode
 			else {
-				
-				char * remain = en_prefix_hint(en->buf);
-				if (remain != NULL) {
-					int remain_len = strlen(remain);
-					en->buf = realloc(en->buf, remain_len +1);
-					sprintf(en->buf, "%s", remain);
-					en->cur = remain_len;
-					free(remain);
+				node * tmp;
+				for (tmp = en->dic; tmp != NULL; tmp=tmp->next) {
+					if (strlen(tmp->word) > buf_len && strncmp (en->buf, tmp->word, buf_len) == 0) {
+						int tmp_len = strlen(tmp->word);
+						en->buf = realloc(en->buf, tmp_len +1);
+						strcpy(en->buf, tmp->word);
+						en->cur = tmp_len;
+						break;
+					}
 				}
 				en->chooseMode = 0;
 			}
@@ -318,23 +279,26 @@ INPUT_RETURN_VALUE FcitxEnGetCandWords(void* arg)
     ConfigEn(en);
 
     FcitxLog(DEBUG, "buf: %s", en->buf);
+    int buf_len = strlen(en->buf);
 
 	if(en->chooseMode) {
-		int index = 0;
-		int candNum;
-		char ** candList = en_prefix_suggest(en->buf, &candNum);
-		while (index < candNum) {
-			FcitxCandidateWord cw;
-			cw.callback = FcitxEnGetCandWord;
-			cw.owner = en;
-			cw.priv = NULL;
-			cw.strExtra = NULL;
-			cw.strWord = strdup(candList[index]);
-			cw.wordType = MSG_OTHER;
-			FcitxCandidateWordAppend(FcitxInputStateGetCandidateList(input), &cw);
-			index ++;
+		node * tmp;
+		int num = 0;
+		for (tmp = en->dic; tmp != NULL; tmp=tmp->next) {
+			if (strlen(tmp->word) > buf_len && strncmp (en->buf, tmp->word, buf_len) == 0) {
+				FcitxCandidateWord cw;
+				cw.callback = FcitxEnGetCandWord;
+				cw.owner = en;
+				cw.priv = NULL;
+				cw.strExtra = NULL;
+				cw.strWord = strdup(tmp->word);
+				cw.wordType = MSG_OTHER;
+				FcitxCandidateWordAppend(FcitxInputStateGetCandidateList(input), &cw);
+				num ++;
+				if (num == 10)
+					break;
+			}
 		}
-		en_free_list(candList, candNum);
     }
     // setup cursor
     FcitxInputStateSetShowCursor(input, true);
@@ -344,13 +308,14 @@ INPUT_RETURN_VALUE FcitxEnGetCandWords(void* arg)
     FcitxMessagesAddMessageAtLast(msgPreedit, MSG_INPUT, "%s", en->buf);
     FcitxMessagesAddMessageAtLast(clientPreedit, MSG_INPUT, "%s", en->buf);
 	
-	int buf_len = strlen(en->buf);
 	if(buf_len >= 2) {
-		char * remain = en_prefix_hint(en->buf);
-		if (remain != NULL) {
-			FcitxMessagesAddMessageAtLast(msgPreedit, MSG_OTHER, "%s", remain+buf_len);
-			FcitxMessagesAddMessageAtLast(clientPreedit, MSG_OTHER, "%s", remain+buf_len);
-			free(remain);
+		node * tmp;
+		for (tmp = en->dic; tmp != NULL; tmp=tmp->next) {
+			if (strlen(tmp->word) > buf_len && strncmp (en->buf, tmp->word, buf_len) == 0) {
+				FcitxMessagesAddMessageAtLast(msgPreedit, MSG_OTHER, "%s", tmp->word+buf_len);
+				FcitxMessagesAddMessageAtLast(clientPreedit, MSG_OTHER, "%s", tmp->word+buf_len);
+				break;
+			}
 		}
 	}
     return IRV_DISPLAY_CANDWORDS;
@@ -376,6 +341,13 @@ void FcitxEnDestroy(void* arg)
 {
     FcitxEn* en = (FcitxEn*) arg;
     free(en->buf);
+    node * tmp = en->dic;
+    while(tmp != NULL) {
+		free(tmp->word);
+		node * next = tmp->next;
+		free(tmp);
+		tmp = next;
+	}
     free(arg);
 }
 
