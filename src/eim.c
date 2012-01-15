@@ -64,8 +64,10 @@ const FcitxHotkey FCITX_GRAV[2] = {{NULL, FcitxKey_grave, FcitxKeyState_None}, {
 char ** en_prefix_suggest(const char * prefix, int * n)
 {
 	FILE * file = fopen(EN_DIC_FILE, "r");
-	if (file == NULL)
-		return 0;
+	if (file == NULL) {
+		*n = 0;
+		return NULL;
+	}
 	char line [32];
 	char ** candlist = malloc(0);
 	int list_size = 0;
