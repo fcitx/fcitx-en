@@ -135,7 +135,7 @@ INPUT_RETURN_VALUE FcitxEnDoInput(void* arg, FcitxKeySym sym, unsigned int state
     FcitxEn* en = (FcitxEn*) arg;
     FcitxInputState *input = FcitxInstanceGetInputState(en->owner);
 
-    if (FcitxHotkeyIsHotKeyLAZ(sym, state) || 
+    if (FcitxHotkeyIsHotKeyLAZ(sym, state) || FcitxHotkeyIsHotKeyUAZ(sym, state) ||
       FcitxHotkeyIsHotKey(sym, state, FCITX_HYPHEN) || 
       FcitxHotkeyIsHotKey(sym, state, FCITX_SLASH) || 
       FcitxHotkeyIsHotKey(sym, state, FCITX_APOS) || 
@@ -224,9 +224,11 @@ INPUT_RETURN_VALUE FcitxEnDoInput(void* arg, FcitxKeySym sym, unsigned int state
 			return IRV_TO_PROCESS;
 		}
 		// sym is symbol, or enter, so it is the end of word
-		char in = (char) sym & 0xff;
-		en->buf = realloc(en->buf, buf_len+2);
-		sprintf(en->buf, "%s%c", en->buf, in);
+		if (FcitxHotkeyIsHotKeySimple(sym, state)) { // for enter key
+			char in = (char) sym & 0xff;
+			en->buf = realloc(en->buf, buf_len+2);
+			sprintf(en->buf, "%s%c", en->buf, in);
+		}
 		strcpy(FcitxInputStateGetOutputString(input), en->buf);
 		return IRV_COMMIT_STRING;
     } else {
