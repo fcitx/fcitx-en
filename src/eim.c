@@ -53,7 +53,7 @@ static boolean LoadEnConfig(FcitxEnConfig* fs);
 static void SaveEnConfig(FcitxEnConfig* fs);
 static void ConfigEn(FcitxEn* en);
 static char ** en_prefix_suggest(const char * prefix, int * n);
-static void en_free_list(char *** cp, const int n);
+static void en_free_list(char ** candlist, const int n);
 static char * en_prefix_hint(const char * prefix);
 const FcitxHotkey FCITX_TAB[2] = {{NULL, FcitxKey_Tab, FcitxKeyState_None}, {NULL, FcitxKey_None, FcitxKeyState_None}};
 const FcitxHotkey FCITX_HYPHEN[2] = {{NULL, FcitxKey_minus, FcitxKeyState_None}, {NULL, FcitxKey_None, FcitxKeyState_None}};
@@ -105,9 +105,8 @@ char * en_prefix_hint(const char * prefix)
 	return NULL;
 }
 
-static void en_free_list(char *** cp, const int n)
+static void en_free_list(char ** candlist, const int n)
 {
-	char ** candlist = * cp;
 	int i;
 	for(i=0; i<n ; i++) {
 		free(candlist[i]);
@@ -335,7 +334,7 @@ INPUT_RETURN_VALUE FcitxEnGetCandWords(void* arg)
 			FcitxCandidateWordAppend(FcitxInputStateGetCandidateList(input), &cw);
 			index ++;
 		}
-		en_free_list(&candList, candNum);
+		en_free_list(candList, candNum);
     }
     // setup cursor
     FcitxInputStateSetShowCursor(input, true);
