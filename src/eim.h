@@ -48,7 +48,6 @@ typedef struct _FcitxEn {
     FcitxEnConfig config;
     FcitxInstance* owner;
     char * buf;
-    int len;
     int cur;
     int chooseMode;
 } FcitxEn;

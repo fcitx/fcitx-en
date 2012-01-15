@@ -133,7 +133,6 @@ void* FcitxEnCreate(FcitxInstance* instance)
     bindtextdomain("fcitx-en", LOCALEDIR);
 
     en->owner = instance;
-    en->len = 0;
     en->cur = 0;
     en->chooseMode = 0;
     en->buf = strdup("");
@@ -183,9 +182,9 @@ INPUT_RETURN_VALUE FcitxEnDoInput(void* arg, FcitxKeySym sym, unsigned int state
 		char in = (char) sym & 0xff;
 		char * half1 = strndup(en->buf, en->cur);
 		char * half2 = strdup(en->buf+en->cur);
-		en->buf = realloc(en->buf, en->len+2);
+		en->buf = realloc(en->buf, strlen(en->buf)+2);
 		sprintf(en->buf, "%s%c%s", half1, in, half2);
-		en->len++; en->cur++;
+		en->cur++;
 		free(half1); free(half2);
 		en->chooseMode = 0;
 	} else if (FcitxHotkeyIsHotKeyDigit(sym, state) && en->chooseMode == 1) {
@@ -198,27 +197,27 @@ INPUT_RETURN_VALUE FcitxEnDoInput(void* arg, FcitxKeySym sym, unsigned int state
 		if (en->cur>0) {
 			char * half1 = strndup(en->buf, en->cur-1);
 			char * half2 = strdup(en->buf+en->cur);
-			en->buf = realloc(en->buf, en->len);
+			en->buf = realloc(en->buf, strlen(en->buf));
 			sprintf(en->buf, "%s%s", half1, half2);
-			en->len--; en->cur--;
+			en->cur--;
 			free(half1); free(half2);
 		}
 		en->chooseMode = 0;
     } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_DELETE)) {
-		if (en->cur == en->len) {
+		int buf_len = strlen(en->buf);
+		if (en->cur == buf_len) {
 			return IRV_TO_PROCESS; //hit end
 		}
-		if (en->cur < en->len) {
+		if (en->cur < buf_len) {
 			char * half1 = strndup(en->buf, en->cur);
 			char * half2 = strdup(en->buf+en->cur+1);
-			en->buf = realloc(en->buf, en->len);
+			en->buf = realloc(en->buf, buf_len);
 			sprintf(en->buf, "%s%s", half1, half2);
-			en->len--;
 			free(half1); free(half2);
 		}
 		en->chooseMode = 0;
     } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_RIGHT)) {
-		if (en->cur < en->len && en->chooseMode == 0)
+		if (en->cur < strlen(en->buf) && en->chooseMode == 0)
 			en->cur++; // not in chooseMode
 		else
 			return IRV_TO_PROCESS;
@@ -230,36 +229,41 @@ INPUT_RETURN_VALUE FcitxEnDoInput(void* arg, FcitxKeySym sym, unsigned int state
     } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_ESCAPE)) {
 		return IRV_CLEAN; // not in chooseMode, reset status
 	} else if (FcitxHotkeyIsHotKey(sym, state, FCITX_TAB)) {
-		if (en->len == 0) {
+		int buf_len = strlen(en->buf);
+		if (buf_len == 0) {
 			return IRV_TO_PROCESS;
 		}
-		if (en->chooseMode == 0 && strlen(en->buf) >= 2)
-			en->chooseMode = 1; // in chooseMode, cancel chooseMode
-		else
-			en->chooseMode = 0;
-	} else if (FcitxHotkeyIsHotKey(sym, state, FCITX_GRAV)) {
-		//quick complete
-		if (en->len == 0) {
-			return IRV_TO_PROCESS;
-		}
-		if (strlen(en->buf) >= 2) {
-			char * remain = en_prefix_hint(en->buf);
-			if (remain != NULL) {
-				int remain_len = strlen(remain);
-				en->buf = realloc(en->buf, remain_len +1);
-				sprintf(en->buf, "%s", remain);
-				en->cur = en->len = remain_len;
-				free(remain);
+		if (buf_len >= 2) {
+			if (en->chooseMode == 0)
+				en->chooseMode = 1; // in chooseMode, cancel chooseMode
+			else {
+				
+				char * remain = en_prefix_hint(en->buf);
+				if (remain != NULL) {
+					int remain_len = strlen(remain);
+					en->buf = realloc(en->buf, remain_len +1);
+					sprintf(en->buf, "%s", remain);
+					en->cur = remain_len;
+					free(remain);
+				}
+				en->chooseMode = 0;
 			}
 		}
-		en->chooseMode = 0;
+	} else if (FcitxHotkeyIsHotKey(sym, state, FCITX_GRAV)) {
+		//quick complete
+		if (strlen(en->buf) == 0) {
+			return IRV_TO_PROCESS;
+		}
+		if (en->chooseMode == 1)
+			en->chooseMode = 0;
 	} else if (FcitxHotkeyIsHotKeySimple(sym, state) || FcitxHotkeyIsHotKey(sym, state, FCITX_ENTER)) {
-		if (en->len == 0) {
+		int buf_len = strlen(en->buf);
+		if (buf_len == 0) {
 			return IRV_TO_PROCESS;
 		}
 		// sym is symbol, or enter, so it is the end of word
 		char in = (char) sym & 0xff;
-		en->buf = realloc(en->buf, en->len+2);
+		en->buf = realloc(en->buf, buf_len+2);
 		sprintf(en->buf, "%s%c", en->buf, in);
 		strcpy(FcitxInputStateGetOutputString(input), en->buf);
 		return IRV_COMMIT_STRING;
@@ -283,7 +287,7 @@ __EXPORT_API
 void FcitxEnReset(void* arg)
 {
     FcitxEn* en = (FcitxEn*) arg;
-    en->len= en->cur = 0;
+    en->cur = 0;
     free(en->buf);
     en->buf = strdup("");
     en->chooseMode = 0;
@@ -333,18 +337,18 @@ INPUT_RETURN_VALUE FcitxEnGetCandWords(void* arg)
     }
     // setup cursor
     FcitxInputStateSetShowCursor(input, true);
-    FcitxLog(DEBUG, "buf len: %d, cur: %d", en->len, en->cur);
     FcitxInputStateSetCursorPos(input, en->cur);
     FcitxInputStateSetClientCursorPos(input, en->cur);
 
     FcitxMessagesAddMessageAtLast(msgPreedit, MSG_INPUT, "%s", en->buf);
     FcitxMessagesAddMessageAtLast(clientPreedit, MSG_INPUT, "%s", en->buf);
 	
-	if(en->len >= 2) {
+	int buf_len = strlen(en->buf);
+	if(buf_len >= 2) {
 		char * remain = en_prefix_hint(en->buf);
 		if (remain != NULL) {
-			FcitxMessagesAddMessageAtLast(msgPreedit, MSG_OTHER, "%s", remain+en->len);
-			FcitxMessagesAddMessageAtLast(clientPreedit, MSG_OTHER, "%s", remain+en->len);
+			FcitxMessagesAddMessageAtLast(msgPreedit, MSG_OTHER, "%s", remain+buf_len);
+			FcitxMessagesAddMessageAtLast(clientPreedit, MSG_OTHER, "%s", remain+buf_len);
 			free(remain);
 		}
 	}
