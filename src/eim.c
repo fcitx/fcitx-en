@@ -54,7 +54,6 @@ static void SaveEnConfig(FcitxEnConfig* fs);
 static void ConfigEn(FcitxEn* en);
 const FcitxHotkey FCITX_TAB[2] = {{NULL, FcitxKey_Tab, FcitxKeyState_None}, {NULL, FcitxKey_None, FcitxKeyState_None}};
 const FcitxHotkey FCITX_HYPHEN[2] = {{NULL, FcitxKey_minus, FcitxKeyState_None}, {NULL, FcitxKey_None, FcitxKeyState_None}};
-const FcitxHotkey FCITX_SLASH[2] = {{NULL, FcitxKey_slash, FcitxKeyState_None}, {NULL, FcitxKey_None, FcitxKeyState_None}};
 const FcitxHotkey FCITX_APOS[2] = {{NULL, FcitxKey_apostrophe, FcitxKeyState_None}, {NULL, FcitxKey_None, FcitxKeyState_None}};
 const FcitxHotkey FCITX_GRAV[2] = {{NULL, FcitxKey_grave, FcitxKeyState_None}, {NULL, FcitxKey_None, FcitxKeyState_None}};
 
@@ -137,7 +136,6 @@ INPUT_RETURN_VALUE FcitxEnDoInput(void* arg, FcitxKeySym sym, unsigned int state
 
     if (FcitxHotkeyIsHotKeyLAZ(sym, state) || FcitxHotkeyIsHotKeyUAZ(sym, state) ||
       FcitxHotkeyIsHotKey(sym, state, FCITX_HYPHEN) || 
-      FcitxHotkeyIsHotKey(sym, state, FCITX_SLASH) || 
       FcitxHotkeyIsHotKey(sym, state, FCITX_APOS) || 
       (FcitxHotkeyIsHotKeyDigit(sym, state) && en->chooseMode == 0)) {
 		char in = (char) sym & 0xff;
