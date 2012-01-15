@@ -274,7 +274,7 @@ INPUT_RETURN_VALUE FcitxEnGetCandWords(void* arg)
     FcitxCandidateWordSetPageSize(FcitxInputStateGetCandidateList(input), config->iMaxCandWord);
 
     //clean up window asap
-    FcitxInstanceCleanInputWindowUp(en->owner);
+    FcitxInstanceCleanInputWindow(en->owner);
 
     ConfigEn(en);
 
