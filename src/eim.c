@@ -54,6 +54,7 @@ static void SaveEnConfig(FcitxEnConfig* fs);
 static void ConfigEn(FcitxEn* en);
 static int en_prefix_suggest(const char * prefix, char *** cp);
 static void en_free_list(char *** cp, const int n);
+static char * en_prefix_hint(const char * prefix);
 const FcitxHotkey FCITX_TAB[2] = {{NULL, FcitxKey_Tab, FcitxKeyState_None}, {NULL, FcitxKey_None, FcitxKeyState_None}};
 const FcitxHotkey FCITX_HYPHEN[2] = {{NULL, FcitxKey_minus, FcitxKeyState_None}, {NULL, FcitxKey_None, FcitxKeyState_None}};
 const FcitxHotkey FCITX_SLASH[2] = {{NULL, FcitxKey_slash, FcitxKeyState_None}, {NULL, FcitxKey_None, FcitxKeyState_None}};
@@ -82,6 +83,23 @@ int en_prefix_suggest(const char * prefix, char *** cp)
 	}
 	*cp = candlist;
 	return list_size;
+}
+
+char * en_prefix_hint(const char * prefix)
+{
+	FILE * file = fopen("/usr/local/share/fcitx/en_dic.txt", "r");
+	if (file == NULL)
+		return NULL;
+	char line [32];
+	int prefix_len = strlen(prefix);
+	while (fgets (line, 32, file) != NULL)
+	{
+		line[strlen(line)-1] = '\0'; // remove newline
+		if (strlen(line) > prefix_len && strncmp (prefix, line, prefix_len) == 0) {
+			return strdup(line+prefix_len);
+		}
+	}
+	return NULL;
 }
 
 static void en_free_list(char *** cp, const int n)
@@ -304,7 +322,15 @@ INPUT_RETURN_VALUE FcitxEnGetCandWords(void* arg)
 
     FcitxMessagesAddMessageAtLast(msgPreedit, MSG_INPUT, "%s", en->buf);
     FcitxMessagesAddMessageAtLast(clientPreedit, MSG_INPUT, "%s", en->buf);
-
+	
+	if(strlen(en->buf) >= 2) {
+		char * remain = en_prefix_hint(en->buf);
+		if (remain != NULL) {
+			FcitxMessagesAddMessageAtLast(msgPreedit, MSG_OTHER, "%s", remain);
+			FcitxMessagesAddMessageAtLast(clientPreedit, MSG_OTHER, "%s", remain);
+			free(remain);
+		}
+	}
     return IRV_DISPLAY_CANDWORDS;
 }
 
