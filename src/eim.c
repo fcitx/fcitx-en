@@ -59,6 +59,7 @@ const FcitxHotkey FCITX_TAB[2] = {{NULL, FcitxKey_Tab, FcitxKeyState_None}, {NUL
 const FcitxHotkey FCITX_HYPHEN[2] = {{NULL, FcitxKey_minus, FcitxKeyState_None}, {NULL, FcitxKey_None, FcitxKeyState_None}};
 const FcitxHotkey FCITX_SLASH[2] = {{NULL, FcitxKey_slash, FcitxKeyState_None}, {NULL, FcitxKey_None, FcitxKeyState_None}};
 const FcitxHotkey FCITX_APOS[2] = {{NULL, FcitxKey_apostrophe, FcitxKeyState_None}, {NULL, FcitxKey_None, FcitxKeyState_None}};
+const FcitxHotkey FCITX_GRAV[2] = {{NULL, FcitxKey_grave, FcitxKeyState_None}, {NULL, FcitxKey_None, FcitxKeyState_None}};
 
 int en_prefix_suggest(const char * prefix, char *** cp)
 {
@@ -96,7 +97,7 @@ char * en_prefix_hint(const char * prefix)
 	{
 		line[strlen(line)-1] = '\0'; // remove newline
 		if (strlen(line) > prefix_len && strncmp (prefix, line, prefix_len) == 0) {
-			return strdup(line+prefix_len);
+			return strdup(line);
 		}
 	}
 	return NULL;
@@ -236,6 +237,22 @@ INPUT_RETURN_VALUE FcitxEnDoInput(void* arg, FcitxKeySym sym, unsigned int state
 			en->chooseMode = 1; // in chooseMode, cancel chooseMode
 		else
 			en->chooseMode = 0;
+	} else if (FcitxHotkeyIsHotKey(sym, state, FCITX_GRAV)) {
+		//quick complete
+		if (en->len == 0) {
+			return IRV_TO_PROCESS;
+		}
+		if (strlen(en->buf) >= 2) {
+			char * remain = en_prefix_hint(en->buf);
+			if (remain != NULL) {
+				int remain_len = strlen(remain);
+				en->buf = realloc(en->buf, remain_len +1);
+				sprintf(en->buf, "%s", remain);
+				en->cur = en->len = remain_len;
+				free(remain);
+			}
+		}
+		en->chooseMode = 0;
 	} else if (FcitxHotkeyIsHotKeySimple(sym, state) || FcitxHotkeyIsHotKey(sym, state, FCITX_ENTER)) {
 		if (en->len == 0) {
 			return IRV_TO_PROCESS;
@@ -323,11 +340,11 @@ INPUT_RETURN_VALUE FcitxEnGetCandWords(void* arg)
     FcitxMessagesAddMessageAtLast(msgPreedit, MSG_INPUT, "%s", en->buf);
     FcitxMessagesAddMessageAtLast(clientPreedit, MSG_INPUT, "%s", en->buf);
 	
-	if(strlen(en->buf) >= 2) {
+	if(en->len >= 2) {
 		char * remain = en_prefix_hint(en->buf);
 		if (remain != NULL) {
-			FcitxMessagesAddMessageAtLast(msgPreedit, MSG_OTHER, "%s", remain);
-			FcitxMessagesAddMessageAtLast(clientPreedit, MSG_OTHER, "%s", remain);
+			FcitxMessagesAddMessageAtLast(msgPreedit, MSG_OTHER, "%s", remain+en->len);
+			FcitxMessagesAddMessageAtLast(clientPreedit, MSG_OTHER, "%s", remain+en->len);
 			free(remain);
 		}
 	}
