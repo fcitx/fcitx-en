@@ -133,6 +133,7 @@ INPUT_RETURN_VALUE FcitxEnDoInput(void* arg, FcitxKeySym sym, unsigned int state
 {
     FcitxEn* en = (FcitxEn*) arg;
     FcitxInputState *input = FcitxInstanceGetInputState(en->owner);
+    int buf_len = strlen(en->buf);
 
     if (FcitxHotkeyIsHotKeyLAZ(sym, state) || FcitxHotkeyIsHotKeyUAZ(sym, state) ||
       FcitxHotkeyIsHotKey(sym, state, FCITX_HYPHEN) || 
@@ -141,7 +142,7 @@ INPUT_RETURN_VALUE FcitxEnDoInput(void* arg, FcitxKeySym sym, unsigned int state
 		char in = (char) sym & 0xff;
 		char * half1 = strndup(en->buf, en->cur);
 		char * half2 = strdup(en->buf+en->cur);
-		en->buf = realloc(en->buf, strlen(en->buf)+2);
+		en->buf = realloc(en->buf, buf_len +2);
 		sprintf(en->buf, "%s%c%s", half1, in, half2);
 		en->cur++;
 		free(half1); free(half2);
@@ -150,23 +151,20 @@ INPUT_RETURN_VALUE FcitxEnDoInput(void* arg, FcitxKeySym sym, unsigned int state
 		// in choose mode
 			return IRV_TO_PROCESS;
     } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_BACKSPACE)) {
-		if (en->cur == 0) {
-			return IRV_TO_PROCESS; //hit end
-		}
+		if (en->cur == 0)
+			return IRV_TO_PROCESS; // end
 		if (en->cur>0) {
 			char * half1 = strndup(en->buf, en->cur-1);
 			char * half2 = strdup(en->buf+en->cur);
-			en->buf = realloc(en->buf, strlen(en->buf));
+			en->buf = realloc(en->buf, buf_len);
 			sprintf(en->buf, "%s%s", half1, half2);
 			en->cur--;
 			free(half1); free(half2);
 		}
 		en->chooseMode = 0;
     } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_DELETE)) {
-		int buf_len = strlen(en->buf);
-		if (en->cur == buf_len) {
-			return IRV_TO_PROCESS; //hit end
-		}
+		if (en->cur == buf_len)
+			return IRV_TO_PROCESS;
 		if (en->cur < buf_len) {
 			char * half1 = strndup(en->buf, en->cur);
 			char * half2 = strdup(en->buf+en->cur+1);
@@ -176,22 +174,20 @@ INPUT_RETURN_VALUE FcitxEnDoInput(void* arg, FcitxKeySym sym, unsigned int state
 		}
 		en->chooseMode = 0;
     } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_RIGHT)) {
-		if (en->cur < strlen(en->buf) && en->chooseMode == 0)
-			en->cur++; // not in chooseMode
-		else
+		if (buf_len == 0)
 			return IRV_TO_PROCESS;
+		if (en->cur < buf_len && en->chooseMode == 0)
+			en->cur++; // not in chooseMode
     } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_LEFT)) {
+		if (buf_len == 0)
+			return IRV_TO_PROCESS;
 		if (en->cur > 0 && en->chooseMode == 0)
 			en->cur--; // not in chooseMode
-		else
-			return IRV_TO_PROCESS;
     } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_ESCAPE)) {
 		return IRV_CLEAN; // not in chooseMode, reset status
 	} else if (FcitxHotkeyIsHotKey(sym, state, FCITX_TAB)) {
-		int buf_len = strlen(en->buf);
-		if (buf_len == 0) {
+		if (buf_len == 0)
 			return IRV_TO_PROCESS;
-		}
 		if (buf_len >= 2) {
 			if (en->chooseMode == 0)
 				en->chooseMode = 1; // in chooseMode, cancel chooseMode
@@ -211,16 +207,13 @@ INPUT_RETURN_VALUE FcitxEnDoInput(void* arg, FcitxKeySym sym, unsigned int state
 		}
 	} else if (FcitxHotkeyIsHotKey(sym, state, FCITX_GRAV)) {
 		//quick complete
-		if (strlen(en->buf) == 0) {
+		if (buf_len == 0)
 			return IRV_TO_PROCESS;
-		}
 		if (en->chooseMode == 1)
 			en->chooseMode = 0;
 	} else if (FcitxHotkeyIsHotKeySimple(sym, state) || FcitxHotkeyIsHotKey(sym, state, FCITX_ENTER)) {
-		int buf_len = strlen(en->buf);
-		if (buf_len == 0) {
+		if (buf_len == 0)
 			return IRV_TO_PROCESS;
-		}
 		// sym is symbol, or enter, so it is the end of word
 		if (FcitxHotkeyIsHotKeySimple(sym, state)) { // for enter key
 			char in = (char) sym & 0xff;
@@ -232,7 +225,10 @@ INPUT_RETURN_VALUE FcitxEnDoInput(void* arg, FcitxKeySym sym, unsigned int state
     } else {
         return IRV_TO_PROCESS;
     }
-    return IRV_DISPLAY_CANDWORDS;
+    if (strlen(en->buf) > 0)
+		return IRV_DISPLAY_CANDWORDS;
+	else
+		return IRV_CLEAN;
 }
 
 __EXPORT_API
