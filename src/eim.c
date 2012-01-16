@@ -194,7 +194,7 @@ INPUT_RETURN_VALUE FcitxEnDoInput(void* arg, FcitxKeySym sym, unsigned int state
 			else {
 				node * tmp;
 				for (tmp = en->dic; tmp != NULL; tmp=tmp->next) {
-					if (strlen(tmp->word) > buf_len + 2 && strncmp (en->buf, tmp->word, buf_len) == 0) {
+					if (strlen(tmp->word) >= buf_len + 2 && strncmp (en->buf, tmp->word, buf_len) == 0) {
 						int tmp_len = strlen(tmp->word);
 						en->buf = realloc(en->buf, tmp_len +1);
 						strcpy(en->buf, tmp->word);
@@ -281,7 +281,7 @@ INPUT_RETURN_VALUE FcitxEnGetCandWords(void* arg)
 		node * tmp;
 		int num = 0;
 		for (tmp = en->dic; tmp != NULL; tmp=tmp->next) {
-			if (strlen(tmp->word) > buf_len + 2 && strncmp (en->buf, tmp->word, buf_len) == 0) {
+			if (strlen(tmp->word) >= buf_len + 2 && strncmp (en->buf, tmp->word, buf_len) == 0) {
 				FcitxCandidateWord cw;
 				cw.callback = FcitxEnGetCandWord;
 				cw.owner = en;
@@ -307,7 +307,7 @@ INPUT_RETURN_VALUE FcitxEnGetCandWords(void* arg)
 	if(buf_len >= 2) {
 		node * tmp;
 		for (tmp = en->dic; tmp != NULL; tmp=tmp->next) {
-			if (strlen(tmp->word) > buf_len +2 && strncmp (en->buf, tmp->word, buf_len) == 0) {
+			if (strlen(tmp->word) >= buf_len + 2 && strncmp (en->buf, tmp->word, buf_len) == 0) {
 				FcitxMessagesAddMessageAtLast(msgPreedit, MSG_OTHER, "%s", tmp->word+buf_len);
 				FcitxMessagesAddMessageAtLast(clientPreedit, MSG_OTHER, "%s", tmp->word+buf_len);
 				break;
