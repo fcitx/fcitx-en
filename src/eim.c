@@ -176,13 +176,21 @@ INPUT_RETURN_VALUE FcitxEnDoInput(void* arg, FcitxKeySym sym, unsigned int state
     } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_RIGHT)) {
 		if (buf_len == 0)
 			return IRV_TO_PROCESS;
-		if (en->cur < buf_len && en->chooseMode == 0)
-			en->cur++; // not in chooseMode
+		if (en->chooseMode == 0) {
+			if(en->cur < buf_len)
+				en->cur++;
+		} else {
+			return IRV_TO_PROCESS;
+		}
     } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_LEFT)) {
 		if (buf_len == 0)
 			return IRV_TO_PROCESS;
-		if (en->cur > 0 && en->chooseMode == 0)
-			en->cur--; // not in chooseMode
+		if (en->chooseMode == 0) {
+			if (en->cur > 0)
+				en->cur--;
+		} else {
+			return IRV_TO_PROCESS;
+		}
     } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_ESCAPE)) {
 		return IRV_CLEAN; // not in chooseMode, reset status
 	} else if (FcitxHotkeyIsHotKey(sym, state, FCITX_TAB)) {
