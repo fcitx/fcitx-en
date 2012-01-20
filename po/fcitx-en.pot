@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2012-01-11 00:04-0800\n"
+"POT-Creation-Date: 2012-01-16 06:27-0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -22,6 +22,5 @@ msgid "Easy English For Fcitx"
 msgstr ""
 
 #: /home/march/fcitx-en/build/po/tmp/fcitx-en.conf.in.h:2
-#: /home/march/fcitx-en/build/po/../..//src/eim.c:92
 msgid "En"
 msgstr ""
