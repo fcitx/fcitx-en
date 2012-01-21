@@ -147,7 +147,7 @@ INPUT_RETURN_VALUE FcitxEnDoInput(void* arg, FcitxKeySym sym, unsigned int state
 		free(half1); free(half2);
 		en->chooseMode = 0;
     } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_BACKSPACE)) {
-		if (en->cur == 0)
+		if (buf_len == 0)
 			return IRV_TO_PROCESS; // end
 		if (en->cur>0) {
 			char * half1 = strndup(en->buf, en->cur-1);
@@ -159,7 +159,7 @@ INPUT_RETURN_VALUE FcitxEnDoInput(void* arg, FcitxKeySym sym, unsigned int state
 		}
 		en->chooseMode = 0;
     } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_DELETE)) {
-		if (en->cur == buf_len)
+		if (buf_len == 0)
 			return IRV_TO_PROCESS;
 		if (en->cur < buf_len) {
 			char * half1 = strndup(en->buf, en->cur);
@@ -216,7 +216,7 @@ INPUT_RETURN_VALUE FcitxEnDoInput(void* arg, FcitxKeySym sym, unsigned int state
 		if (en->chooseMode == 1)
 			en->chooseMode = 0;
 	} else if (FcitxHotkeyIsHotKeySimple(sym, state) || FcitxHotkeyIsHotKey(sym, state, FCITX_ENTER)) {
-		if (buf_len == 0 || (FcitxHotkeyIsHotKeySimple(sym, state) && en->chooseMode == 1))
+		if (buf_len == 0 || (FcitxHotkeyIsHotKeyDigit(sym, state) && en->chooseMode == 1))
 			return IRV_TO_PROCESS;
 		// sym is symbol, or enter, so it is the end of word
 		if (FcitxHotkeyIsHotKeySimple(sym, state)) { // for enter key
