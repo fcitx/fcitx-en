@@ -1,7 +1,7 @@
 [InputMethod]
 UniqueName=fcitx-en
 _Name=En
-IconName=fcitx-en
+IconName=en
 Priority=1
 LangCode=zh_TW
 Parent=fcitx-en
