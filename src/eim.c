@@ -221,8 +221,10 @@ INPUT_RETURN_VALUE FcitxEnDoInput(void* arg, FcitxKeySym sym, unsigned int state
 		// sym is symbol, or enter, so it is the end of word
 		if (FcitxHotkeyIsHotKeySimple(sym, state)) { // for enter key
 			char in = (char) sym & 0xff;
+			char * old = strdup(en->buf);
 			en->buf = realloc(en->buf, buf_len+2);
-			sprintf(en->buf, "%s%c", en->buf, in);
+			sprintf(en->buf, "%s%c", old, in);
+			free(old);
 		}
 		strcpy(FcitxInputStateGetOutputString(input), en->buf);
 		return IRV_COMMIT_STRING;
