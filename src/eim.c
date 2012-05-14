@@ -38,24 +38,32 @@
 #include "config.h"
 #include "eim.h"
 
-FCITX_EXPORT_API
-FcitxIMClass ime = {
-    FcitxEnCreate,
-    FcitxEnDestroy
-};
-FCITX_EXPORT_API
-int ABI_VERSION = FCITX_ABI_VERSION;
+#define MAX_WORD_LEN 64
+
+FCITX_EXPORT_API FcitxIMClass ime = {
+FcitxEnCreate, FcitxEnDestroy};
+
+FCITX_EXPORT_API int ABI_VERSION = FCITX_ABI_VERSION;
 
 CONFIG_DESC_DEFINE(GetFcitxEnConfigDesc, "fcitx-en.desc")
-static INPUT_RETURN_VALUE FcitxEnGetCandWord(void* arg, FcitxCandidateWord* candWord);
-static void FcitxEnReloadConfig(void* arg);
-static boolean LoadEnConfig(FcitxEnConfig* fs);
-static void SaveEnConfig(FcitxEnConfig* fs);
-static void ConfigEn(FcitxEn* en);
-const FcitxHotkey FCITX_TAB[2] = {{NULL, FcitxKey_Tab, FcitxKeyState_None}, {NULL, FcitxKey_None, FcitxKeyState_None}};
-const FcitxHotkey FCITX_HYPHEN[2] = {{NULL, FcitxKey_minus, FcitxKeyState_None}, {NULL, FcitxKey_None, FcitxKeyState_None}};
-const FcitxHotkey FCITX_APOS[2] = {{NULL, FcitxKey_apostrophe, FcitxKeyState_None}, {NULL, FcitxKey_None, FcitxKeyState_None}};
-const FcitxHotkey FCITX_GRAV[2] = {{NULL, FcitxKey_grave, FcitxKeyState_None}, {NULL, FcitxKey_None, FcitxKeyState_None}};
+static INPUT_RETURN_VALUE
+FcitxEnGetCandWord(void *arg, FcitxCandidateWord * candWord);
+static void
+FcitxEnReloadConfig(void *arg);
+static boolean
+LoadEnConfig(FcitxEnConfig * fs);
+static void
+SaveEnConfig(FcitxEnConfig * fs);
+static void
+ConfigEn(FcitxEn * en);
+const FcitxHotkey FCITX_TAB[2] =
+  { {NULL, FcitxKey_Tab, FcitxKeyState_None}, {NULL, FcitxKey_None, FcitxKeyState_None} };
+const FcitxHotkey FCITX_HYPHEN[2] =
+  { {NULL, FcitxKey_minus, FcitxKeyState_None}, {NULL, FcitxKey_None, FcitxKeyState_None} };
+const FcitxHotkey FCITX_APOS[2] =
+  { {NULL, FcitxKey_apostrophe, FcitxKeyState_None}, {NULL, FcitxKey_None, FcitxKeyState_None} };
+const FcitxHotkey FCITX_GRAV[2] =
+  { {NULL, FcitxKey_grave, FcitxKeyState_None}, {NULL, FcitxKey_None, FcitxKeyState_None} };
 
 /**
  * @brief initialize the extra input method
@@ -63,61 +71,52 @@ const FcitxHotkey FCITX_GRAV[2] = {{NULL, FcitxKey_grave, FcitxKeyState_None}, {
  * @param arg
  * @return successful or not
  **/
-__EXPORT_API
-void* FcitxEnCreate(FcitxInstance* instance)
+__EXPORT_API void *
+FcitxEnCreate(FcitxInstance * instance)
 {
-    if (GetFcitxEnConfigDesc() == NULL)
-        return NULL;
-    
-    FcitxEn* en = (FcitxEn*) fcitx_utils_malloc0(sizeof(FcitxEn));
-    FcitxGlobalConfig* config = FcitxInstanceGetGlobalConfig(instance);
-    FcitxInputState *input = FcitxInstanceGetInputState(instance);
-    FcitxCandidateWordSetChoose(FcitxInputStateGetCandidateList(input), DIGIT_STR_CHOOSE);
-    
-    bindtextdomain("fcitx-en", LOCALEDIR);
+  if (GetFcitxEnConfigDesc() == NULL)
+    return NULL;
 
-	//load dic
-	FILE * file = fopen(EN_DIC_FILE, "r");
-	if (file == NULL)
-		return NULL;
-	char line [32];
-	node ** tmp = &(en->dic);
-	while (fgets (line, 32, file) != NULL)
-	{
-		line[strlen(line)-1] = '\0'; // remove newline
-		*tmp = (node *) malloc(sizeof(node));
-		(*tmp)->word = strdup(line);
-		(*tmp)->next = NULL;
-		tmp = &((*tmp)->next);
-	}
-	
-	
-    en->owner = instance;
-    en->cur = 0;
-    en->chooseMode = 0;
-    en->buf = strdup("");
-    FcitxCandidateWordSetPageSize(FcitxInputStateGetCandidateList(input), config->iMaxCandWord);
-    LoadEnConfig(&en->config);
-    ConfigEn(en);
+  FcitxEn *en = (FcitxEn *) fcitx_utils_malloc0(sizeof(FcitxEn));
+  FcitxGlobalConfig *config = FcitxInstanceGetGlobalConfig(instance);
+  FcitxInputState *input = FcitxInstanceGetInputState(instance);
+  FcitxCandidateWordSetChoose(FcitxInputStateGetCandidateList(input), DIGIT_STR_CHOOSE);
 
-    FcitxInstanceRegisterIM(
-        instance,
-        en,
-        "en",
-        _("En"),
-        "en",
-        FcitxEnInit,
-        FcitxEnReset,
-        FcitxEnDoInput,
-        FcitxEnGetCandWords,
-        NULL,
-        NULL,
-        FcitxEnReloadConfig,
-        NULL,
-        1,
-        "zh_TW"
-    );
-    return en;
+  bindtextdomain("fcitx-en", LOCALEDIR);
+
+  //load dic
+  FILE *file = fopen(EN_DIC_FILE, "r");
+  if (file == NULL)
+    return NULL;
+  char line[MAX_WORD_LEN];
+  node **tmp = &(en->dic);
+  while (fgets(line, sizeof(line), file) != NULL) {
+    line[strlen(line) - 1] = '\0';      // remove newline
+    *tmp = (node *) malloc(sizeof(node));
+    (*tmp)->word = strdup(line);
+    (*tmp)->next = NULL;
+    tmp = &((*tmp)->next);
+  }
+	fclose(file);
+
+
+  en->owner = instance;
+  en->cur = 0;
+  en->chooseMode = 0;
+  en->buf = strdup("");
+  FcitxCandidateWordSetPageSize(FcitxInputStateGetCandidateList(input), config->iMaxCandWord);
+  LoadEnConfig(&en->config);
+  ConfigEn(en);
+
+  FcitxInstanceRegisterIM(instance,
+                          en,
+                          "en",
+                          _("En"),
+                          "en",
+                          FcitxEnInit,
+                          FcitxEnReset,
+                          FcitxEnDoInput, FcitxEnGetCandWords, NULL, NULL, FcitxEnReloadConfig, NULL, 1, "en_US");
+  return en;
 }
 
 /**
@@ -128,133 +127,133 @@ void* FcitxEnCreate(FcitxInstance* instance)
  * @param count count from XKeyEvent
  * @return INPUT_RETURN_VALUE
  **/
-__EXPORT_API
-INPUT_RETURN_VALUE FcitxEnDoInput(void* arg, FcitxKeySym sym, unsigned int state)
+__EXPORT_API INPUT_RETURN_VALUE FcitxEnDoInput(void *arg, FcitxKeySym sym, unsigned int state)
 {
-    FcitxEn* en = (FcitxEn*) arg;
-    FcitxInputState *input = FcitxInstanceGetInputState(en->owner);
-    int buf_len = strlen(en->buf);
+  FcitxEn *en = (FcitxEn *) arg;
+  FcitxInputState *input = FcitxInstanceGetInputState(en->owner);
+  int buf_len = strlen(en->buf);
 
-    if (FcitxHotkeyIsHotKeyLAZ(sym, state) || FcitxHotkeyIsHotKeyUAZ(sym, state) ||
-      FcitxHotkeyIsHotKey(sym, state, FCITX_HYPHEN) || 
-      FcitxHotkeyIsHotKey(sym, state, FCITX_APOS)) {
-		char in = (char) sym & 0xff;
-		char * half1 = strndup(en->buf, en->cur);
-		char * half2 = strdup(en->buf+en->cur);
-		en->buf = realloc(en->buf, buf_len +2);
-		sprintf(en->buf, "%s%c%s", half1, in, half2);
-		en->cur++;
-		free(half1); free(half2);
-		en->chooseMode = 0;
-    } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_BACKSPACE)) {
-		if (buf_len == 0)
-			return IRV_TO_PROCESS; // end
-		if (en->cur>0) {
-			char * half1 = strndup(en->buf, en->cur-1);
-			char * half2 = strdup(en->buf+en->cur);
-			en->buf = realloc(en->buf, buf_len);
-			sprintf(en->buf, "%s%s", half1, half2);
-			en->cur--;
-			free(half1); free(half2);
-		}
-		en->chooseMode = 0;
-    } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_DELETE)) {
-		if (buf_len == 0)
-			return IRV_TO_PROCESS;
-		if (en->cur < buf_len) {
-			char * half1 = strndup(en->buf, en->cur);
-			char * half2 = strdup(en->buf+en->cur+1);
-			en->buf = realloc(en->buf, buf_len);
-			sprintf(en->buf, "%s%s", half1, half2);
-			free(half1); free(half2);
-		}
-		en->chooseMode = 0;
-    } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_RIGHT)) {
-		if (buf_len == 0)
-			return IRV_TO_PROCESS;
-		if (en->chooseMode == 0) {
-			if(en->cur < buf_len)
-				en->cur++;
-		} else {
-			return IRV_TO_PROCESS;
-		}
-    } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_LEFT)) {
-		if (buf_len == 0)
-			return IRV_TO_PROCESS;
-		if (en->chooseMode == 0) {
-			if (en->cur > 0)
-				en->cur--;
-		} else {
-			return IRV_TO_PROCESS;
-		}
-    } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_ESCAPE)) {
-		return IRV_CLEAN; // not in chooseMode, reset status
-	} else if (FcitxHotkeyIsHotKey(sym, state, FCITX_TAB)) {
-		if (buf_len == 0)
-			return IRV_TO_PROCESS;
-		if (buf_len >= 2) {
-			if (en->chooseMode == 0)
-				en->chooseMode = 1; // in chooseMode, cancel chooseMode
-			else {
-				node * tmp;
-				for (tmp = en->dic; tmp != NULL; tmp=tmp->next) {
-					if (strlen(tmp->word) >= buf_len + 2 && strncmp (en->buf, tmp->word, buf_len) == 0) {
-						int tmp_len = strlen(tmp->word);
-						en->buf = realloc(en->buf, tmp_len +1);
-						strcpy(en->buf, tmp->word);
-						en->cur = tmp_len;
-						break;
-					}
-				}
-				en->chooseMode = 0;
-			}
-		}
-	} else if (FcitxHotkeyIsHotKey(sym, state, FCITX_GRAV)) {
-		//quick complete
-		if (buf_len == 0)
-			return IRV_TO_PROCESS;
-		if (en->chooseMode == 1)
-			en->chooseMode = 0;
-	} else if (FcitxHotkeyIsHotKeySimple(sym, state) || FcitxHotkeyIsHotKey(sym, state, FCITX_ENTER)) {
-		if (buf_len == 0 || (FcitxHotkeyIsHotKeyDigit(sym, state) && en->chooseMode == 1))
-			return IRV_TO_PROCESS;
-		// sym is symbol, or enter, so it is the end of word
-		if (FcitxHotkeyIsHotKeySimple(sym, state)) { // for enter key
-			char in = (char) sym & 0xff;
-			char * old = strdup(en->buf);
-			en->buf = realloc(en->buf, buf_len+2);
-			sprintf(en->buf, "%s%c", old, in);
-			free(old);
-		}
-		strcpy(FcitxInputStateGetOutputString(input), en->buf);
-		return IRV_COMMIT_STRING;
-    } else {
-        return IRV_TO_PROCESS;
-    }
-    if (strlen(en->buf) > 0)
-		return IRV_DISPLAY_CANDWORDS;
-	else
-		return IRV_CLEAN;
-}
-
-__EXPORT_API
-boolean FcitxEnInit(void* arg)
-{
-    FcitxEn* en = (FcitxEn*) arg;
-    FcitxInstanceSetContext(en->owner, CONTEXT_IM_KEYBOARD_LAYOUT, "us");
-    FcitxInstanceSetContext(en->owner, CONTEXT_ALTERNATIVE_PREVPAGE_KEY, FCITX_LEFT);
-    FcitxInstanceSetContext(en->owner, CONTEXT_ALTERNATIVE_NEXTPAGE_KEY, FCITX_RIGHT);
-    return true;
-}
-
-__EXPORT_API
-void FcitxEnReset(void* arg)
-{
-    FcitxEn* en = (FcitxEn*) arg;
-    en->cur = 0;
-    free(en->buf);
-    en->buf = strdup("");
+  if (FcitxHotkeyIsHotKeyLAZ(sym, state) || FcitxHotkeyIsHotKeyUAZ(sym, state) ||
+      FcitxHotkeyIsHotKey(sym, state, FCITX_HYPHEN) || FcitxHotkeyIsHotKey(sym, state, FCITX_APOS)) {
+    char in = (char) sym & 0xff;
+    char *half1 = strndup(en->buf, en->cur);
+    char *half2 = strdup(en->buf + en->cur);
+    en->buf = realloc(en->buf, buf_len + 2);
+    sprintf(en->buf, "%s%c%s", half1, in, half2);
+    en->cur++;
+    free(half1);
+    free(half2);
     en->chooseMode = 0;
+  } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_BACKSPACE)) {
+    if (buf_len == 0)
+      return IRV_TO_PROCESS;    // end
+    if (en->cur > 0) {
+      char *half1 = strndup(en->buf, en->cur - 1);
+      char *half2 = strdup(en->buf + en->cur);
+      en->buf = realloc(en->buf, buf_len);
+      sprintf(en->buf, "%s%s", half1, half2);
+      en->cur--;
+      free(half1);
+      free(half2);
+    }
+    en->chooseMode = 0;
+  } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_DELETE)) {
+    if (buf_len == 0)
+      return IRV_TO_PROCESS;
+    if (en->cur < buf_len) {
+      char *half1 = strndup(en->buf, en->cur);
+      char *half2 = strdup(en->buf + en->cur + 1);
+      en->buf = realloc(en->buf, buf_len);
+      sprintf(en->buf, "%s%s", half1, half2);
+      free(half1);
+      free(half2);
+    }
+    en->chooseMode = 0;
+  } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_RIGHT)) {
+    if (buf_len == 0)
+      return IRV_TO_PROCESS;
+    if (en->chooseMode == 0) {
+      if (en->cur < buf_len)
+        en->cur++;
+    } else {
+      return IRV_TO_PROCESS;
+    }
+  } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_LEFT)) {
+    if (buf_len == 0)
+      return IRV_TO_PROCESS;
+    if (en->chooseMode == 0) {
+      if (en->cur > 0)
+        en->cur--;
+    } else {
+      return IRV_TO_PROCESS;
+    }
+  } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_ESCAPE)) {
+    return IRV_CLEAN;           // not in chooseMode, reset status
+  } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_TAB)) {
+    if (buf_len == 0)
+      return IRV_TO_PROCESS;
+    if (buf_len >= 2) {
+      if (en->chooseMode == 0)
+        en->chooseMode = 1;     // in chooseMode, cancel chooseMode
+      else {
+        node *tmp;
+        for (tmp = en->dic; tmp != NULL; tmp = tmp->next) {
+          if (strlen(tmp->word) >= buf_len + 2 && strncmp(en->buf, tmp->word, buf_len) == 0) {
+            int tmp_len = strlen(tmp->word);
+            en->buf = realloc(en->buf, tmp_len + 1);
+            strcpy(en->buf, tmp->word);
+            en->cur = tmp_len;
+            break;
+          }
+        }
+        en->chooseMode = 0;
+      }
+    }
+  } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_GRAV)) {
+    //quick complete
+    if (buf_len == 0)
+      return IRV_TO_PROCESS;
+    if (en->chooseMode == 1)
+      en->chooseMode = 0;
+  } else if (FcitxHotkeyIsHotKeySimple(sym, state) || FcitxHotkeyIsHotKey(sym, state, FCITX_ENTER)) {
+    if (buf_len == 0 || (FcitxHotkeyIsHotKeyDigit(sym, state) && en->chooseMode == 1))
+      return IRV_TO_PROCESS;
+    // sym is symbol, or enter, so it is the end of word
+    if (FcitxHotkeyIsHotKeySimple(sym, state)) {        // for enter key
+      char in = (char) sym & 0xff;
+      char *old = strdup(en->buf);
+      en->buf = realloc(en->buf, buf_len + 2);
+      sprintf(en->buf, "%s%c", old, in);
+      free(old);
+    }
+    strcpy(FcitxInputStateGetOutputString(input), en->buf);
+    return IRV_COMMIT_STRING;
+  } else {
+    return IRV_TO_PROCESS;
+  }
+  if (strlen(en->buf) > 0)
+    return IRV_DISPLAY_CANDWORDS;
+  else
+    return IRV_CLEAN;
+}
+
+__EXPORT_API boolean FcitxEnInit(void *arg)
+{
+  FcitxEn *en = (FcitxEn *) arg;
+  FcitxInstanceSetContext(en->owner, CONTEXT_IM_KEYBOARD_LAYOUT, "us");
+  FcitxInstanceSetContext(en->owner, CONTEXT_ALTERNATIVE_PREVPAGE_KEY, FCITX_LEFT);
+  FcitxInstanceSetContext(en->owner, CONTEXT_ALTERNATIVE_NEXTPAGE_KEY, FCITX_RIGHT);
+  return true;
+}
+
+__EXPORT_API void
+FcitxEnReset(void *arg)
+{
+  FcitxEn *en = (FcitxEn *) arg;
+  en->cur = 0;
+  free(en->buf);
+  en->buf = strdup("");
+  en->chooseMode = 0;
 }
 
 
@@ -264,72 +263,72 @@ void FcitxEnReset(void* arg)
  * @param searchMode
  * @return INPUT_RETURN_VALUE
  **/
-__EXPORT_API
-INPUT_RETURN_VALUE FcitxEnGetCandWords(void* arg)
+__EXPORT_API INPUT_RETURN_VALUE FcitxEnGetCandWords(void *arg)
 {
-    FcitxEn* en = (FcitxEn*) arg;
-    FcitxInputState *input = FcitxInstanceGetInputState(en->owner);
-    FcitxMessages *msgPreedit = FcitxInputStateGetPreedit(input);
-    FcitxMessages *clientPreedit = FcitxInputStateGetClientPreedit(input);
-    FcitxGlobalConfig* config = FcitxInstanceGetGlobalConfig(en->owner);
-    
-    FcitxCandidateWordSetPageSize(FcitxInputStateGetCandidateList(input), config->iMaxCandWord);
+  FcitxEn *en = (FcitxEn *) arg;
+  FcitxInputState *input = FcitxInstanceGetInputState(en->owner);
+  FcitxMessages *msgPreedit = FcitxInputStateGetPreedit(input);
+  FcitxMessages *clientPreedit = FcitxInputStateGetClientPreedit(input);
+  FcitxGlobalConfig *config = FcitxInstanceGetGlobalConfig(en->owner);
 
-    //clean up window asap
-    FcitxInstanceCleanInputWindow(en->owner);
+  FcitxCandidateWordSetPageSize(FcitxInputStateGetCandidateList(input), config->iMaxCandWord);
 
-    ConfigEn(en);
+  //clean up window asap
+  FcitxInstanceCleanInputWindow(en->owner);
 
-    FcitxLog(DEBUG, "buf: %s", en->buf);
-    int buf_len = strlen(en->buf);
+  ConfigEn(en);
 
-	if(en->chooseMode) {
-		node * tmp;
-		int num = 0;
-		for (tmp = en->dic; tmp != NULL; tmp=tmp->next) {
-			if (strlen(tmp->word) >= buf_len + 2 && strncmp (en->buf, tmp->word, buf_len) == 0) {
-				FcitxCandidateWord cw;
-				cw.callback = FcitxEnGetCandWord;
-				cw.owner = en;
-				cw.priv = NULL;
-				cw.strExtra = NULL;
-				cw.strWord = strdup(tmp->word);
-				cw.wordType = MSG_OTHER;
-				FcitxCandidateWordAppend(FcitxInputStateGetCandidateList(input), &cw);
-				num ++;
-				if (num == 10)
-					break;
-			}
-		}
+  FcitxLog(DEBUG, "buf: %s", en->buf);
+  int buf_len = strlen(en->buf);
+
+  if (en->chooseMode) {
+    node *tmp;
+    int num = 0;
+    for (tmp = en->dic; tmp != NULL; tmp = tmp->next) {
+      if (strlen(tmp->word) >= buf_len + 2 && strncmp(en->buf, tmp->word, buf_len) == 0) {
+        FcitxCandidateWord cw;
+        cw.callback = FcitxEnGetCandWord;
+        cw.owner = en;
+        cw.priv = NULL;
+        cw.strExtra = NULL;
+        cw.strWord = strdup(tmp->word);
+        cw.wordType = MSG_OTHER;
+        FcitxCandidateWordAppend(FcitxInputStateGetCandidateList(input), &cw);
+        num++;
+        if (num == 10)
+          break;
+      }
     }
-    // setup cursor
-    FcitxInputStateSetShowCursor(input, true);
-    FcitxInputStateSetCursorPos(input, en->cur);
-    FcitxInputStateSetClientCursorPos(input, en->cur);
+  }
+  // setup cursor
+  FcitxInputStateSetShowCursor(input, true);
+  FcitxInputStateSetCursorPos(input, en->cur);
+  FcitxInputStateSetClientCursorPos(input, en->cur);
 
-    FcitxMessagesAddMessageAtLast(msgPreedit, MSG_INPUT, "%s", en->buf);
-    FcitxMessagesAddMessageAtLast(clientPreedit, MSG_INPUT, "%s", en->buf);
-	
-	if(buf_len >= 2) {
-		node * tmp;
-		for (tmp = en->dic; tmp != NULL; tmp=tmp->next) {
-			if (strlen(tmp->word) >= buf_len + 2 && strncmp (en->buf, tmp->word, buf_len) == 0) {
-				FcitxMessagesAddMessageAtLast(msgPreedit, MSG_OTHER, "%s", tmp->word+buf_len);
-				FcitxMessagesAddMessageAtLast(clientPreedit, MSG_OTHER, "%s", tmp->word+buf_len);
-				break;
-			}
-		}
-	}
-    return IRV_DISPLAY_CANDWORDS;
+  FcitxMessagesAddMessageAtLast(msgPreedit, MSG_INPUT, "%s", en->buf);
+  FcitxMessagesAddMessageAtLast(clientPreedit, MSG_INPUT, "%s", en->buf);
+
+  if (buf_len >= 2) {
+    node *tmp;
+    for (tmp = en->dic; tmp != NULL; tmp = tmp->next) {
+      if (strlen(tmp->word) >= buf_len + 2 && strncmp(en->buf, tmp->word, buf_len) == 0) {
+        FcitxMessagesAddMessageAtLast(msgPreedit, MSG_OTHER, "%s", tmp->word + buf_len);
+        FcitxMessagesAddMessageAtLast(clientPreedit, MSG_OTHER, "%s", tmp->word + buf_len);
+        break;
+      }
+    }
+  }
+  return IRV_DISPLAY_CANDWORDS;
 }
 
-INPUT_RETURN_VALUE FcitxEnGetCandWord(void* arg, FcitxCandidateWord* candWord)
+INPUT_RETURN_VALUE
+FcitxEnGetCandWord(void *arg, FcitxCandidateWord * candWord)
 {
-    FcitxEn* en = (FcitxEn*) candWord->owner;
-    FcitxInputState *input = FcitxInstanceGetInputState(en->owner);
-	FcitxLog(DEBUG, "selected candword: %s", candWord->strWord);
-	strcpy(FcitxInputStateGetOutputString(input), candWord->strWord);
-	return IRV_COMMIT_STRING;
+  FcitxEn *en = (FcitxEn *) candWord->owner;
+  FcitxInputState *input = FcitxInstanceGetInputState(en->owner);
+  FcitxLog(DEBUG, "selected candword: %s", candWord->strWord);
+  strcpy(FcitxInputStateGetOutputString(input), candWord->strWord);
+  return IRV_COMMIT_STRING;
 }
 
 
@@ -338,59 +337,64 @@ INPUT_RETURN_VALUE FcitxEnGetCandWord(void* arg, FcitxCandidateWord* candWord)
  *
  * @return int
  **/
-__EXPORT_API
-void FcitxEnDestroy(void* arg)
+__EXPORT_API void
+FcitxEnDestroy(void *arg)
 {
-    FcitxEn* en = (FcitxEn*) arg;
-    free(en->buf);
-    node * tmp = en->dic;
-    while(tmp != NULL) {
-		free(tmp->word);
-		node * next = tmp->next;
-		free(tmp);
-		tmp = next;
-	}
-    free(arg);
+  FcitxEn *en = (FcitxEn *) arg;
+  free(en->buf);
+  node *tmp = en->dic;
+  while (tmp != NULL) {
+    free(tmp->word);
+    node *next = tmp->next;
+    free(tmp);
+    tmp = next;
+  }
+  free(arg);
 }
 
-void FcitxEnReloadConfig(void* arg) {
-    FcitxEn* en = (FcitxEn*) arg;
-    LoadEnConfig(&en->config);
-    ConfigEn(en);
+void
+FcitxEnReloadConfig(void *arg)
+{
+  FcitxEn *en = (FcitxEn *) arg;
+  LoadEnConfig(&en->config);
+  ConfigEn(en);
 }
 
-boolean LoadEnConfig(FcitxEnConfig* fs)
+boolean
+LoadEnConfig(FcitxEnConfig * fs)
 {
-    FcitxConfigFileDesc *configDesc = GetFcitxEnConfigDesc();
-    if (!configDesc)
-        return false;
+  FcitxConfigFileDesc *configDesc = GetFcitxEnConfigDesc();
+  if (!configDesc)
+    return false;
 
-    FILE *fp = FcitxXDGGetFileUserWithPrefix("conf", "fcitx-en.config", "rt", NULL);
+  FILE *fp = FcitxXDGGetFileUserWithPrefix("conf", "fcitx-en.config", "rt", NULL);
 
-    if (!fp) {
-        if (errno == ENOENT)
-            SaveEnConfig(fs);
-    }
-    FcitxConfigFile *cfile = FcitxConfigParseConfigFileFp(fp, configDesc);
+  if (!fp) {
+    if (errno == ENOENT)
+      SaveEnConfig(fs);
+  }
+  FcitxConfigFile *cfile = FcitxConfigParseConfigFileFp(fp, configDesc);
 
-    FcitxEnConfigConfigBind(fs, cfile, configDesc);
-    FcitxConfigBindSync(&fs->config);
+  FcitxEnConfigConfigBind(fs, cfile, configDesc);
+  FcitxConfigBindSync(&fs->config);
 
-    if (fp)
-        fclose(fp);
-    return true;
+  if (fp)
+    fclose(fp);
+  return true;
 }
 
-void SaveEnConfig(FcitxEnConfig* fc)
+void
+SaveEnConfig(FcitxEnConfig * fc)
 {
-    FcitxConfigFileDesc *configDesc = GetFcitxEnConfigDesc();
-    FILE *fp = FcitxXDGGetFileUserWithPrefix("conf", "fcitx-en.config", "wt", NULL);
-    FcitxConfigSaveConfigFileFp(fp, &fc->config, configDesc);
-    if (fp)
-        fclose(fp);
+  FcitxConfigFileDesc *configDesc = GetFcitxEnConfigDesc();
+  FILE *fp = FcitxXDGGetFileUserWithPrefix("conf", "fcitx-en.config", "wt", NULL);
+  FcitxConfigSaveConfigFileFp(fp, &fc->config, configDesc);
+  if (fp)
+    fclose(fp);
 }
 
-void ConfigEn(FcitxEn* en)
+void
+ConfigEn(FcitxEn * en)
 {
-    // none at the moment
+  // none at the moment
 }
