@@ -170,7 +170,7 @@ FcitxEnDoInput(void *arg, FcitxKeySym sym, unsigned int state)
       free(half2);
     }
   } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_ESCAPE)) {
-    return IRV_CLEAN;           // not in chooseMode, reset status
+    return IRV_CLEAN;
   } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_TAB)) {
     if (buf_len == 0)
       return IRV_TO_PROCESS;
@@ -317,14 +317,14 @@ boolean
 GoodMatch(const char *current, const char *dictWord)
 {
   int buf_len = strlen(current);
-  if (buf_len < 7)
+  if (buf_len < 5)
 	return strncasecmp(current, dictWord, buf_len) == 0;
   else {
 	int dictLen = strlen(dictWord);
-	if (dictLen < buf_len - 3 || dictLen > buf_len + 3)
+	if (dictLen < buf_len - 2 || dictLen > buf_len + 2)
 		return false;
 	char *tmp = strndup(current, buf_len);
-	float dist = Distance(current, dictWord, 2); // search around 3 chars
+	float dist = Distance(current, dictWord, 2); // search around 2 chars
 	free(tmp);
 	return dist < 2.25;
   }
