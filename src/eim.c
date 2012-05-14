@@ -345,7 +345,7 @@ GoodMatch(const char *current, const char *dictWord)
     char *eqw = strndup(dictWord, buf_len);
     float dist = Distance(current, eqw, 2);        // search around 3 chars
     free(eqw);
-    return dist <= 2;
+    return dist <= 2.5;
   }
 }
 
