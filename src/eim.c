@@ -40,6 +40,7 @@
 
 #define MAX_WORD_LEN 64
 #define CAND_WORD_NUM 10
+#define SHORT_WORD_LEN 6
 
 FCITX_EXPORT_API FcitxIMClass ime = {
   FcitxEnCreate, FcitxEnDestroy
@@ -233,7 +234,7 @@ FcitxEnReset(void *arg)
 int
 compare(const void *a, const void *b)
 {
-  return (((cword *) a)->dist - ((cword *) b)->dist);
+  return (int)(((cword *) a)->dist - ((cword *) b)->dist);
 }
 
 /**
@@ -259,6 +260,7 @@ FcitxEnGetCandWords(void *arg)
   ConfigEn(en);
 
   FcitxLog(DEBUG, "buf: %s", en->buf);
+  int buf_len = strlen(en->buf);
 
   node *tmp;
   cword *clist = (cword *) malloc(sizeof(cword) * CAND_WORD_NUM);
@@ -266,14 +268,17 @@ FcitxEnGetCandWords(void *arg)
   for (tmp = en->dic; tmp != NULL; tmp = tmp->next) {
     if (GoodMatch(en->buf, tmp->word)) {
       clist[num].word = strdup(tmp->word);
-      clist[num].dist = Distance(en->buf, tmp->word, 2);
+      
+      char *eqw = strndup(tmp->word, buf_len);
+      clist[num].dist = Distance(en->buf, eqw, 2);        // search around 3 chars
+      free(eqw);
       num++;
       if (num == CAND_WORD_NUM)
         break;
     }
   }
-
-  qsort((void *) clist, num, sizeof(cword), compare);
+  if (buf_len > SHORT_WORD_LEN)
+	qsort((void *) clist, num, sizeof(cword), compare);
   int i;
   for (i = 0; i < num; i++) {
     FcitxCandidateWord cw;
@@ -334,15 +339,15 @@ boolean
 GoodMatch(const char *current, const char *dictWord)
 {
   int buf_len = strlen(current);
-  if (buf_len <= 6)
+  if (buf_len <= SHORT_WORD_LEN)
     return strncasecmp(current, dictWord, buf_len) == 0;
   else {
     int dictLen = strlen(dictWord);
     if (dictLen < buf_len - 2 || dictLen > buf_len + 2)
       return false;
-    char *tmp = strndup(current, buf_len);
-    float dist = Distance(current, dictWord, 2);        // search around 3 chars
-    free(tmp);
+    char *eqw = strndup(dictWord, buf_len);
+    float dist = Distance(current, eqw, 2);        // search around 3 chars
+    free(eqw);
     return dist <= 2;
   }
 }

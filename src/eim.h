@@ -54,7 +54,7 @@ typedef struct _node
 typedef struct _cword
 {
   char *word;
-  int dist;
+  float dist;
 } cword;
 
 typedef struct _FcitxEn
