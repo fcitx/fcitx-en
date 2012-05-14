@@ -268,10 +268,7 @@ FcitxEnGetCandWords(void *arg)
   for (tmp = en->dic; tmp != NULL; tmp = tmp->next) {
     if (GoodMatch(en->buf, tmp->word)) {
       clist[num].word = strdup(tmp->word);
-      
-      char *eqw = strndup(tmp->word, buf_len);
-      clist[num].dist = Distance(en->buf, eqw, 2);        // search around 3 chars
-      free(eqw);
+      clist[num].dist = Distance(en->buf, tmp->word, 2);        // search around 3 chars
       num++;
       if (num == CAND_WORD_NUM)
         break;
