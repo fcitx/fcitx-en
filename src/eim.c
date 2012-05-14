@@ -318,9 +318,10 @@ GoodMatch(const char *current, const char *dictWord)
 {
   int buf_len = strlen(current);
   if (buf_len < 6)
-	return strncmp(current, dictWord, buf_len) == 0;
+	return strncasecmp(current, dictWord, buf_len) == 0;
   else {
-	if (strlen(dictWord) < buf_len -2)
+	int dictLen = strlen(dictWord);
+	if (dictLen < buf_len - 2 || dictLen > buf_len + 2)
 		return false;
 	char *tmp = strndup(current, buf_len);
 	float dist = Distance(current, dictWord, 2); // search around 2 chars
