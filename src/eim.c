@@ -320,6 +320,7 @@ FcitxEnGetCandWords(void *arg)
     node *tmp;
     for (tmp = en->dic; tmp != NULL; tmp = tmp->next) {
       if (GoodMatch(en->buf, tmp->word)) {
+        en->chooseMode = 1;     // temp allow choose mode
         FcitxCandidateWord cw;
         cw.callback = FcitxEnGetCandWord;
         cw.owner = en;
@@ -371,10 +372,10 @@ boolean
 GoodMatch(const char *current, const char *dictWord)
 {
   int buf_len = strlen(current);
-  char * tmp = strndup(current, buf_len);
-  float dist = Distance(current, dictWord, 3);
+  char *tmp = strndup(current, buf_len);
+  float dist = Distance(current, dictWord, 2);
   free(tmp);
-  return strlen(dictWord) > buf_len && dist < 3;
+  return strlen(dictWord) > buf_len && dist < 2;
 }
 
 void
