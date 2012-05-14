@@ -198,22 +198,18 @@ FcitxEnDoInput(void *arg, FcitxKeySym sym, unsigned int state)
   } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_TAB)) {
     if (buf_len == 0)
       return IRV_TO_PROCESS;
-    if (buf_len >= 2) {
-      if (en->chooseMode == 0)
-        en->chooseMode = 1;     // in chooseMode, cancel chooseMode
-      else {
-        node *tmp;
-        for (tmp = en->dic; tmp != NULL; tmp = tmp->next) {
-          if (GoodMatch(en->buf, tmp->word)) {
-            int tmp_len = strlen(tmp->word);
-            en->buf = realloc(en->buf, tmp_len + 1);
-            strcpy(en->buf, tmp->word);
-            en->cur = tmp_len;
-            break;
-          }
-        }
-        en->chooseMode = 0;
-      }
+    else if (buf_len > 2) {
+		en->chooseMode = 1;
+		node *tmp;
+		for (tmp = en->dic; tmp != NULL; tmp = tmp->next) {
+		  if (GoodMatch(en->buf, tmp->word)) {
+			int tmp_len = strlen(tmp->word);
+			en->buf = realloc(en->buf, tmp_len + 1);
+			strcpy(en->buf, tmp->word);
+			en->cur = tmp_len;
+			break;
+		  }
+		}
     }
   } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_GRAV)) {
     //quick complete
@@ -316,7 +312,7 @@ FcitxEnGetCandWords(void *arg)
   FcitxMessagesAddMessageAtLast(msgPreedit, MSG_INPUT, "%s", en->buf);
   FcitxMessagesAddMessageAtLast(clientPreedit, MSG_INPUT, "%s", en->buf);
 
-  if (buf_len >= 2) {
+  if (buf_len > 2 && en->chooseMode == 0) {
     node *tmp;
     for (tmp = en->dic; tmp != NULL; tmp = tmp->next) {
       if (GoodMatch(en->buf, tmp->word)) {
