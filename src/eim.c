@@ -324,9 +324,9 @@ GoodMatch(const char *current, const char *dictWord)
 	if (dictLen < buf_len - 3 || dictLen > buf_len + 3)
 		return false;
 	char *tmp = strndup(current, buf_len);
-	float dist = Distance(current, dictWord, 3); // search around 3 chars
+	float dist = Distance(current, dictWord, 2); // search around 3 chars
 	free(tmp);
-	return dist < 2;
+	return dist < 2.25;
   }
 }
 
