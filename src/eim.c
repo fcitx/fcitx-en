@@ -369,9 +369,9 @@ GoodMatch(const char *current, const char *dictWord)
 {
   int buf_len = strlen(current);
   char *tmp = strndup(current, buf_len);
-  float dist = Distance(current, dictWord, 2);
+  float dist = Distance(current, dictWord, 2); // search around 2 chars
   free(tmp);
-  return strlen(dictWord) > buf_len && dist < 2;
+  return strlen(dictWord) > buf_len && dist < (0.2*buf_len); //allow 2 chars error for every 10 chars
 }
 
 void
