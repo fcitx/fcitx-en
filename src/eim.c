@@ -320,8 +320,14 @@ FcitxEnGetCandWords(void *arg)
     node *tmp;
     for (tmp = en->dic; tmp != NULL; tmp = tmp->next) {
       if (GoodMatch(en->buf, tmp->word)) {
-        FcitxMessagesAddMessageAtLast(msgPreedit, MSG_OTHER, "%s", tmp->word + buf_len);
-        FcitxMessagesAddMessageAtLast(clientPreedit, MSG_OTHER, "%s", tmp->word + buf_len);
+        FcitxCandidateWord cw;
+        cw.callback = FcitxEnGetCandWord;
+        cw.owner = en;
+        cw.priv = NULL;
+        cw.strExtra = NULL;
+        cw.strWord = strdup(tmp->word);
+        cw.wordType = MSG_OTHER;
+        FcitxCandidateWordAppend(FcitxInputStateGetCandidateList(input), &cw);
         break;
       }
     }
@@ -368,7 +374,7 @@ GoodMatch(const char *current, const char *dictWord)
   char * tmp = strndup(current, buf_len);
   float dist = Distance(current, dictWord, 3);
   free(tmp);
-  return strlen(dictWord) > buf_len && dist < 4;
+  return strlen(dictWord) > buf_len && dist < 3;
 }
 
 void
