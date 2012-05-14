@@ -368,10 +368,12 @@ boolean
 GoodMatch(const char *current, const char *dictWord)
 {
   int buf_len = strlen(current);
+  if (strlen(dictWord) < buf_len -2)
+	return false;
   char *tmp = strndup(current, buf_len);
   float dist = Distance(current, dictWord, 2); // search around 2 chars
   free(tmp);
-  return strlen(dictWord) > buf_len && dist < 3;
+  return dist < 3;
 }
 
 void
