@@ -58,7 +58,6 @@ typedef struct _FcitxEn
   node *dic;
   char *buf;
   int cur;
-  int chooseMode;
 } FcitxEn;
 
 CONFIG_BINDING_DECLARE(FcitxEnConfig);

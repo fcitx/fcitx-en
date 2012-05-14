@@ -67,8 +67,6 @@ const FcitxHotkey FCITX_HYPHEN[2] =
   { {NULL, FcitxKey_minus, FcitxKeyState_None}, {NULL, FcitxKey_None, FcitxKeyState_None} };
 const FcitxHotkey FCITX_APOS[2] =
   { {NULL, FcitxKey_apostrophe, FcitxKeyState_None}, {NULL, FcitxKey_None, FcitxKeyState_None} };
-const FcitxHotkey FCITX_GRAV[2] =
-  { {NULL, FcitxKey_grave, FcitxKeyState_None}, {NULL, FcitxKey_None, FcitxKeyState_None} };
 
 /**
  * @brief initialize the extra input method
@@ -107,7 +105,6 @@ FcitxEnCreate(FcitxInstance * instance)
 
   en->owner = instance;
   en->cur = 0;
-  en->chooseMode = 0;
   en->buf = strdup("");
   FcitxCandidateWordSetPageSize(FcitxInputStateGetCandidateList(input), config->iMaxCandWord);
   LoadEnConfig(&en->config);
@@ -149,7 +146,6 @@ FcitxEnDoInput(void *arg, FcitxKeySym sym, unsigned int state)
     en->cur++;
     free(half1);
     free(half2);
-    en->chooseMode = 0;
   } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_BACKSPACE)) {
     if (buf_len == 0)
       return IRV_TO_PROCESS;    // end
@@ -162,7 +158,6 @@ FcitxEnDoInput(void *arg, FcitxKeySym sym, unsigned int state)
       free(half1);
       free(half2);
     }
-    en->chooseMode = 0;
   } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_DELETE)) {
     if (buf_len == 0)
       return IRV_TO_PROCESS;
@@ -174,32 +169,12 @@ FcitxEnDoInput(void *arg, FcitxKeySym sym, unsigned int state)
       free(half1);
       free(half2);
     }
-    en->chooseMode = 0;
-  } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_RIGHT)) {
-    if (buf_len == 0)
-      return IRV_TO_PROCESS;
-    if (en->chooseMode == 0) {
-      if (en->cur < buf_len)
-        en->cur++;
-    } else {
-      return IRV_TO_PROCESS;
-    }
-  } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_LEFT)) {
-    if (buf_len == 0)
-      return IRV_TO_PROCESS;
-    if (en->chooseMode == 0) {
-      if (en->cur > 0)
-        en->cur--;
-    } else {
-      return IRV_TO_PROCESS;
-    }
   } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_ESCAPE)) {
     return IRV_CLEAN;           // not in chooseMode, reset status
   } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_TAB)) {
     if (buf_len == 0)
       return IRV_TO_PROCESS;
     else if (buf_len > 2) {
-		en->chooseMode = 1;
 		node *tmp;
 		for (tmp = en->dic; tmp != NULL; tmp = tmp->next) {
 		  if (GoodMatch(en->buf, tmp->word)) {
@@ -211,14 +186,8 @@ FcitxEnDoInput(void *arg, FcitxKeySym sym, unsigned int state)
 		  }
 		}
     }
-  } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_GRAV)) {
-    //quick complete
-    if (buf_len == 0)
-      return IRV_TO_PROCESS;
-    if (en->chooseMode == 1)
-      en->chooseMode = 0;
   } else if (FcitxHotkeyIsHotKeySimple(sym, state) || FcitxHotkeyIsHotKey(sym, state, FCITX_ENTER)) {
-    if (buf_len == 0 || (FcitxHotkeyIsHotKeyDigit(sym, state) && en->chooseMode == 1))
+    if (buf_len == 0 || FcitxHotkeyIsHotKeyDigit(sym, state))
       return IRV_TO_PROCESS;
     // sym is symbol, or enter, so it is the end of word
     if (FcitxHotkeyIsHotKeySimple(sym, state)) {        // for enter key
@@ -256,7 +225,6 @@ FcitxEnReset(void *arg)
   en->cur = 0;
   free(en->buf);
   en->buf = strdup("");
-  en->chooseMode = 0;
 }
 
 
@@ -285,7 +253,6 @@ FcitxEnGetCandWords(void *arg)
   FcitxLog(DEBUG, "buf: %s", en->buf);
   int buf_len = strlen(en->buf);
 
-  if (en->chooseMode) {
     node *tmp;
     int num = 0;
     for (tmp = en->dic; tmp != NULL; tmp = tmp->next) {
@@ -303,7 +270,6 @@ FcitxEnGetCandWords(void *arg)
           break;
       }
     }
-  }
   // setup cursor
   FcitxInputStateSetShowCursor(input, true);
   FcitxInputStateSetCursorPos(input, en->cur);
@@ -312,23 +278,6 @@ FcitxEnGetCandWords(void *arg)
   FcitxMessagesAddMessageAtLast(msgPreedit, MSG_INPUT, "%s", en->buf);
   FcitxMessagesAddMessageAtLast(clientPreedit, MSG_INPUT, "%s", en->buf);
 
-  if (buf_len > 2 && en->chooseMode == 0) {
-    node *tmp;
-    for (tmp = en->dic; tmp != NULL; tmp = tmp->next) {
-      if (GoodMatch(en->buf, tmp->word)) {
-        en->chooseMode = 1;     // temp allow choose mode
-        FcitxCandidateWord cw;
-        cw.callback = FcitxEnGetCandWord;
-        cw.owner = en;
-        cw.priv = NULL;
-        cw.strExtra = NULL;
-        cw.strWord = strdup(tmp->word);
-        cw.wordType = MSG_OTHER;
-        FcitxCandidateWordAppend(FcitxInputStateGetCandidateList(input), &cw);
-        break;
-      }
-    }
-  }
   return IRV_DISPLAY_CANDWORDS;
 }
 
