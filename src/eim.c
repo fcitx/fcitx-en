@@ -39,6 +39,7 @@
 #include "eim.h"
 
 #define MAX_WORD_LEN 64
+#define CAND_WORD_NUM 10
 
 FCITX_EXPORT_API FcitxIMClass ime = {
   FcitxEnCreate, FcitxEnDestroy
@@ -175,19 +176,21 @@ FcitxEnDoInput(void *arg, FcitxKeySym sym, unsigned int state)
     if (buf_len == 0)
       return IRV_TO_PROCESS;
     else if (buf_len > 2) {
-		node *tmp;
-		for (tmp = en->dic; tmp != NULL; tmp = tmp->next) {
-		  if (GoodMatch(en->buf, tmp->word)) {
-			int tmp_len = strlen(tmp->word);
-			en->buf = realloc(en->buf, tmp_len + 1);
-			strcpy(en->buf, tmp->word);
-			en->cur = tmp_len;
-			break;
-		  }
-		}
+      node *tmp;
+      for (tmp = en->dic; tmp != NULL; tmp = tmp->next) {
+        if (GoodMatch(en->buf, tmp->word)) {
+          int tmp_len = strlen(tmp->word);
+          en->buf = realloc(en->buf, tmp_len + 1);
+          strcpy(en->buf, tmp->word);
+          en->cur = tmp_len;
+          break;
+        }
+      }
     }
   } else if (FcitxHotkeyIsHotKeySimple(sym, state) || FcitxHotkeyIsHotKey(sym, state, FCITX_ENTER)) {
-    if (buf_len == 0 || (FcitxHotkeyIsHotKeyDigit(sym, state) && FcitxCandidateWordGetListSize(FcitxInputStateGetCandidateList(input)) > 0))
+    if (buf_len == 0 ||
+        (FcitxHotkeyIsHotKeyDigit(sym, state) &&
+         FcitxCandidateWordGetListSize(FcitxInputStateGetCandidateList(input)) > 0))
       return IRV_TO_PROCESS;
     // sym is symbol, or enter, so it is the end of word
     if (FcitxHotkeyIsHotKeySimple(sym, state)) {        // for enter key
@@ -227,6 +230,11 @@ FcitxEnReset(void *arg)
   en->buf = strdup("");
 }
 
+int
+compare(const void *a, const void *b)
+{
+  return (((cword *) a)->dist - ((cword *) b)->dist);
+}
 
 /**
  * @brief function DoInput has done everything for us.
@@ -253,23 +261,33 @@ FcitxEnGetCandWords(void *arg)
   FcitxLog(DEBUG, "buf: %s", en->buf);
   int buf_len = strlen(en->buf);
 
-    node *tmp;
-    int num = 0;
-    for (tmp = en->dic; tmp != NULL; tmp = tmp->next) {
-      if (GoodMatch(en->buf, tmp->word)) {
-        FcitxCandidateWord cw;
-        cw.callback = FcitxEnGetCandWord;
-        cw.owner = en;
-        cw.priv = NULL;
-        cw.strExtra = NULL;
-        cw.strWord = strdup(tmp->word);
-        cw.wordType = MSG_OTHER;
-        FcitxCandidateWordAppend(FcitxInputStateGetCandidateList(input), &cw);
-        num++;
-        if (num == 10)
-          break;
-      }
+  node *tmp;
+  cword *clist = (cword *) malloc(sizeof(cword) * CAND_WORD_NUM);
+  int num = 0;
+  for (tmp = en->dic; tmp != NULL; tmp = tmp->next) {
+    if (GoodMatch(en->buf, tmp->word)) {
+      clist[num].word = strdup(tmp->word);
+      clist[num].dist = Distance(en->buf, tmp->word);
+      num++;
+      if (num == CAND_WORD_NUM)
+        break;
     }
+  }
+
+  qsort((void *) clist, num, sizeof(cword), compare);
+  int i;
+  for (i = 0; i < num; i++) {
+    FcitxCandidateWord cw;
+    cw.callback = FcitxEnGetCandWord;
+    cw.owner = en;
+    cw.priv = NULL;
+    cw.strExtra = NULL;
+    cw.strWord = clist[i].word;
+    cw.wordType = MSG_OTHER;
+    FcitxCandidateWordAppend(FcitxInputStateGetCandidateList(input), &cw);
+  }
+  free(clist);
+
   // setup cursor
   FcitxInputStateSetShowCursor(input, true);
   FcitxInputStateSetCursorPos(input, en->cur);
@@ -318,15 +336,15 @@ GoodMatch(const char *current, const char *dictWord)
 {
   int buf_len = strlen(current);
   if (buf_len <= 6)
-	return strncasecmp(current, dictWord, buf_len) == 0;
+    return strncasecmp(current, dictWord, buf_len) == 0;
   else {
-	int dictLen = strlen(dictWord);
-	if (dictLen < buf_len - 2 || dictLen > buf_len + 2)
-		return false;
-	char *tmp = strndup(current, buf_len);
-	float dist = Distance(current, dictWord, 2); // search around 3 chars
-	free(tmp);
-	return dist <= 2;
+    int dictLen = strlen(dictWord);
+    if (dictLen < buf_len - 2 || dictLen > buf_len + 2)
+      return false;
+    char *tmp = strndup(current, buf_len);
+    float dist = Distance(current, dictWord, 2);        // search around 3 chars
+    free(tmp);
+    return dist <= 2;
   }
 }
 

@@ -51,6 +51,12 @@ typedef struct _node
   struct _node *next;
 } node;
 
+typedef struct _cword
+{
+  char *word;
+  int dist;
+} cword;
+
 typedef struct _FcitxEn
 {
   FcitxEnConfig config;
