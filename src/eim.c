@@ -41,7 +41,8 @@
 #define MAX_WORD_LEN 64
 
 FCITX_EXPORT_API FcitxIMClass ime = {
-FcitxEnCreate, FcitxEnDestroy};
+  FcitxEnCreate, FcitxEnDestroy
+};
 
 FCITX_EXPORT_API int ABI_VERSION = FCITX_ABI_VERSION;
 
@@ -57,7 +58,9 @@ SaveEnConfig(FcitxEnConfig * fs);
 static void
 ConfigEn(FcitxEn * en);
 static boolean
-GoodMatch(const char * current, const char * dictWord);
+GoodMatch(const char *current, const char *dictWord);
+static float
+Distance(const char *s1, const char *s2, const int maxOffset);
 const FcitxHotkey FCITX_TAB[2] =
   { {NULL, FcitxKey_Tab, FcitxKeyState_None}, {NULL, FcitxKey_None, FcitxKeyState_None} };
 const FcitxHotkey FCITX_HYPHEN[2] =
@@ -99,7 +102,7 @@ FcitxEnCreate(FcitxInstance * instance)
     (*tmp)->next = NULL;
     tmp = &((*tmp)->next);
   }
-	fclose(file);
+  fclose(file);
 
 
   en->owner = instance;
@@ -129,7 +132,8 @@ FcitxEnCreate(FcitxInstance * instance)
  * @param count count from XKeyEvent
  * @return INPUT_RETURN_VALUE
  **/
-__EXPORT_API INPUT_RETURN_VALUE FcitxEnDoInput(void *arg, FcitxKeySym sym, unsigned int state)
+__EXPORT_API INPUT_RETURN_VALUE
+FcitxEnDoInput(void *arg, FcitxKeySym sym, unsigned int state)
 {
   FcitxEn *en = (FcitxEn *) arg;
   FcitxInputState *input = FcitxInstanceGetInputState(en->owner);
@@ -239,7 +243,8 @@ __EXPORT_API INPUT_RETURN_VALUE FcitxEnDoInput(void *arg, FcitxKeySym sym, unsig
     return IRV_CLEAN;
 }
 
-__EXPORT_API boolean FcitxEnInit(void *arg)
+__EXPORT_API boolean
+FcitxEnInit(void *arg)
 {
   FcitxEn *en = (FcitxEn *) arg;
   FcitxInstanceSetContext(en->owner, CONTEXT_IM_KEYBOARD_LAYOUT, "us");
@@ -265,7 +270,8 @@ FcitxEnReset(void *arg)
  * @param searchMode
  * @return INPUT_RETURN_VALUE
  **/
-__EXPORT_API INPUT_RETURN_VALUE FcitxEnGetCandWords(void *arg)
+__EXPORT_API INPUT_RETURN_VALUE
+FcitxEnGetCandWords(void *arg)
 {
   FcitxEn *en = (FcitxEn *) arg;
   FcitxInputState *input = FcitxInstanceGetInputState(en->owner);
@@ -356,10 +362,13 @@ FcitxEnDestroy(void *arg)
 
 
 boolean
-GoodMatch(const char * current, const char * dictWord)
+GoodMatch(const char *current, const char *dictWord)
 {
-	int buf_len = strlen(current);
-	return strlen(dictWord) > buf_len && strncmp(current, dictWord, buf_len) == 0;
+  int buf_len = strlen(current);
+  char * tmp = strndup(current, buf_len);
+  float dist = Distance(current, dictWord, 3);
+  free(tmp);
+  return strlen(dictWord) > buf_len && dist < 4;
 }
 
 void
@@ -407,4 +416,44 @@ void
 ConfigEn(FcitxEn * en)
 {
   // none at the moment
+}
+
+
+float
+Distance(const char *s1, const char *s2, const int maxOffset)
+{
+  int len1 = strlen(s1);
+  int len2 = strlen(s2);
+  if (len1 == 0)
+    return len2 == 0 ? 0 : len2;
+  if (len2 == 0)
+    return len1;
+  int c = 0;
+  int offset1 = 0;
+  int offset2 = 0;
+  int lcs = 0;
+  while ((c + offset1 < len1)
+         && (c + offset2 < len2)) {
+    if (s1[c + offset1] == s2[c + offset2])
+      lcs++;
+    else {
+      offset1 = 0;
+      offset2 = 0;
+      int i;
+      for (i = 0; i < maxOffset; i++) {
+        if ((c + i < len1)
+            && (s1[c + i] == s2[c])) {
+          offset1 = i;
+          break;
+        }
+        if ((c + i < len2)
+            && (s1[c] == s2[c + i])) {
+          offset2 = i;
+          break;
+        }
+      }
+    }
+    c++;
+  }
+  return (len1 + len2) / 2 - lcs;
 }
