@@ -259,7 +259,6 @@ FcitxEnGetCandWords(void *arg)
   ConfigEn(en);
 
   FcitxLog(DEBUG, "buf: %s", en->buf);
-  int buf_len = strlen(en->buf);
 
   node *tmp;
   cword *clist = (cword *) malloc(sizeof(cword) * CAND_WORD_NUM);
@@ -267,7 +266,7 @@ FcitxEnGetCandWords(void *arg)
   for (tmp = en->dic; tmp != NULL; tmp = tmp->next) {
     if (GoodMatch(en->buf, tmp->word)) {
       clist[num].word = strdup(tmp->word);
-      clist[num].dist = Distance(en->buf, tmp->word);
+      clist[num].dist = Distance(en->buf, tmp->word, 2);
       num++;
       if (num == CAND_WORD_NUM)
         break;
