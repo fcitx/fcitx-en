@@ -187,7 +187,7 @@ FcitxEnDoInput(void *arg, FcitxKeySym sym, unsigned int state)
 		}
     }
   } else if (FcitxHotkeyIsHotKeySimple(sym, state) || FcitxHotkeyIsHotKey(sym, state, FCITX_ENTER)) {
-    if (buf_len == 0 || (FcitxHotkeyIsHotKeyDigit(sym, state) && FcitxCandidateWordGetListSize(candList) > 0))
+    if (buf_len == 0 || (FcitxHotkeyIsHotKeyDigit(sym, state) && FcitxCandidateWordGetListSize(FcitxInputStateGetCandidateList(input)) > 0))
       return IRV_TO_PROCESS;
     // sym is symbol, or enter, so it is the end of word
     if (FcitxHotkeyIsHotKeySimple(sym, state)) {        // for enter key
