@@ -56,6 +56,8 @@ static void
 SaveEnConfig(FcitxEnConfig * fs);
 static void
 ConfigEn(FcitxEn * en);
+static boolean
+GoodMatch(const char * current, const char * dictWord);
 const FcitxHotkey FCITX_TAB[2] =
   { {NULL, FcitxKey_Tab, FcitxKeyState_None}, {NULL, FcitxKey_None, FcitxKeyState_None} };
 const FcitxHotkey FCITX_HYPHEN[2] =
@@ -198,7 +200,7 @@ __EXPORT_API INPUT_RETURN_VALUE FcitxEnDoInput(void *arg, FcitxKeySym sym, unsig
       else {
         node *tmp;
         for (tmp = en->dic; tmp != NULL; tmp = tmp->next) {
-          if (strlen(tmp->word) >= buf_len + 2 && strncmp(en->buf, tmp->word, buf_len) == 0) {
+          if (GoodMatch(en->buf, tmp->word)) {
             int tmp_len = strlen(tmp->word);
             en->buf = realloc(en->buf, tmp_len + 1);
             strcpy(en->buf, tmp->word);
@@ -285,7 +287,7 @@ __EXPORT_API INPUT_RETURN_VALUE FcitxEnGetCandWords(void *arg)
     node *tmp;
     int num = 0;
     for (tmp = en->dic; tmp != NULL; tmp = tmp->next) {
-      if (strlen(tmp->word) >= buf_len + 2 && strncmp(en->buf, tmp->word, buf_len) == 0) {
+      if (GoodMatch(en->buf, tmp->word)) {
         FcitxCandidateWord cw;
         cw.callback = FcitxEnGetCandWord;
         cw.owner = en;
@@ -311,7 +313,7 @@ __EXPORT_API INPUT_RETURN_VALUE FcitxEnGetCandWords(void *arg)
   if (buf_len >= 2) {
     node *tmp;
     for (tmp = en->dic; tmp != NULL; tmp = tmp->next) {
-      if (strlen(tmp->word) >= buf_len + 2 && strncmp(en->buf, tmp->word, buf_len) == 0) {
+      if (GoodMatch(en->buf, tmp->word)) {
         FcitxMessagesAddMessageAtLast(msgPreedit, MSG_OTHER, "%s", tmp->word + buf_len);
         FcitxMessagesAddMessageAtLast(clientPreedit, MSG_OTHER, "%s", tmp->word + buf_len);
         break;
@@ -350,6 +352,14 @@ FcitxEnDestroy(void *arg)
     tmp = next;
   }
   free(arg);
+}
+
+
+boolean
+GoodMatch(const char * current, const char * dictWord)
+{
+	int buf_len = strlen(current);
+	return strlen(dictWord) > buf_len && strncmp(current, dictWord, buf_len) == 0;
 }
 
 void
