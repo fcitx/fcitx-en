@@ -119,7 +119,7 @@ FcitxEnCreate(FcitxInstance * instance)
                           "en",
                           FcitxEnInit,
                           FcitxEnReset,
-                          FcitxEnDoInput, FcitxEnGetCandWords, NULL, NULL, FcitxEnReloadConfig, NULL, 1, "en_US");
+                          FcitxEnDoInput, FcitxEnGetCandWords, NULL, NULL, FcitxEnReloadConfig, NULL, 2, "en_US");
   return en;
 }
 
