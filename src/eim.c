@@ -146,6 +146,12 @@ FcitxEnDoInput(void *arg, FcitxKeySym sym, unsigned int state)
     en->cur++;
     free(half1);
     free(half2);
+  } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_LEFT)) {
+	  if (en->cur > 0)
+		en->cur--;
+  } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_RIGHT)) {
+	  if (en->cur < buf_len)
+		en->cur++;
   } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_BACKSPACE)) {
     if (buf_len == 0)
       return IRV_TO_PROCESS;    // end
