@@ -137,7 +137,7 @@ FcitxEnDoInput(void *arg, FcitxKeySym sym, unsigned int state)
   int buf_len = strlen(en->buf);
 
 	FcitxCandidateWordList* candList = FcitxInputStateGetCandidateList(input);
-    if (FcitxCandidateWordGetListSize(candList) > 0) {
+    if (buf_len > 0 && FcitxCandidateWordGetListSize(candList) > 0) {
         if (FcitxHotkeyIsHotKeyDigit(sym, state) || FcitxHotkeyIsHotKey(sym, state, FCITX_RIGHT) || FcitxHotkeyIsHotKey(sym, state, FCITX_LEFT))
             return IRV_TO_PROCESS;
     }
