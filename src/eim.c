@@ -169,7 +169,7 @@ FcitxEnDoInput(void *arg, FcitxKeySym sym, unsigned int state)
       free(half1);
       free(half2);
     }
-  } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_RSHIFT)) {
+  } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_RCTRL)) {
 	  if (buf_len == 0)
         return IRV_TO_PROCESS;
 	  node *tmp;
