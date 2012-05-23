@@ -140,12 +140,6 @@ FcitxEnDoInput(void *arg, FcitxKeySym sym, unsigned int state)
     if (FcitxCandidateWordGetListSize(candList) > 0) {
         if (FcitxHotkeyIsHotKeyDigit(sym, state) || FcitxHotkeyIsHotKey(sym, state, FCITX_RIGHT) || FcitxHotkeyIsHotKey(sym, state, FCITX_LEFT))
             return IRV_TO_PROCESS;
-        if (FcitxHotkeyIsHotKey(sym, state, FCITX_SPACE)) {
-            if (FcitxCandidateWordGoNextPage(candList))
-                return IRV_DISPLAY_MESSAGE;
-            else
-                return IRV_DO_NOTHING;
-        }
     }
 
   if (FcitxHotkeyIsHotKeyLAZ(sym, state) || FcitxHotkeyIsHotKeyUAZ(sym, state) ||
