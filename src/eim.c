@@ -169,7 +169,7 @@ FcitxEnDoInput(void *arg, FcitxKeySym sym, unsigned int state)
       free(half1);
       free(half2);
     }
-  } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_LSHIFT)) {
+  } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_RSHIFT)) {
 	  node *tmp;
 	  for (tmp = en->dic; tmp != NULL; tmp = tmp->next) {
 		if (GoodMatch(en->buf, tmp->word)) {
@@ -335,7 +335,7 @@ GoodMatch(const char *current, const char *dictWord)
     char *eqw = strndup(dictWord, buf_len);
     float dist = Distance(current, eqw, 2);        // search around 3 chars
     free(eqw);
-    return dist < 0.2;
+    return dist < 0.33;
   }
 }
 
