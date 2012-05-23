@@ -22,4 +22,4 @@
 
 /* USE fcitx provided macro to bind config and variable */
 CONFIG_BINDING_BEGIN(FcitxEnConfig)
-  CONFIG_BINDING_END()
+    CONFIG_BINDING_END()
