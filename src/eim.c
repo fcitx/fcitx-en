@@ -136,6 +136,18 @@ FcitxEnDoInput(void *arg, FcitxKeySym sym, unsigned int state)
   FcitxInputState *input = FcitxInstanceGetInputState(en->owner);
   int buf_len = strlen(en->buf);
 
+	FcitxCandidateWordList* candList = FcitxInputStateGetCandidateList(input);
+    if (FcitxCandidateWordGetListSize(candList) > 0) {
+        if (FcitxHotkeyIsHotKeyDigit(sym, state) || FcitxHotkeyIsHotKey(sym, state, FCITX_RIGHT) || FcitxHotkeyIsHotKey(sym, state, FCITX_LEFT))
+            return IRV_TO_PROCESS;
+        if (FcitxHotkeyIsHotKey(sym, state, FCITX_SPACE)) {
+            if (FcitxCandidateWordGoNextPage(candList))
+                return IRV_DISPLAY_MESSAGE;
+            else
+                return IRV_DO_NOTHING;
+        }
+    }
+
   if (FcitxHotkeyIsHotKeyLAZ(sym, state) || FcitxHotkeyIsHotKeyUAZ(sym, state) ||
       FcitxHotkeyIsHotKey(sym, state, FCITX_HYPHEN) || FcitxHotkeyIsHotKey(sym, state, FCITX_APOS)) {
     char in = (char) sym & 0xff;
@@ -175,26 +187,10 @@ FcitxEnDoInput(void *arg, FcitxKeySym sym, unsigned int state)
       free(half1);
       free(half2);
     }
-  } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_RCTRL)) {
-	  if (buf_len == 0)
-        return IRV_TO_PROCESS;
-	  node *tmp;
-	  for (tmp = en->dic; tmp != NULL; tmp = tmp->next) {
-		if (GoodMatch(en->buf, tmp->word)) {
-		  int tmp_len = strlen(tmp->word);
-		  en->buf = realloc(en->buf, tmp_len + 1);
-		  strcpy(en->buf, tmp->word);
-		  en->cur = tmp_len;
-		  break;
-		}
-	  }
   } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_ESCAPE)) {
     return IRV_CLEAN;
   } else {
     if (buf_len == 0)
-      return IRV_TO_PROCESS;
-    if (FcitxHotkeyIsHotKeyDigit(sym, state) &&
-         FcitxCandidateWordGetListSize(FcitxInputStateGetCandidateList(input)) > 0)
       return IRV_TO_PROCESS;
     // sym is symbol, or enter, so it is the end of word
     if (FcitxHotkeyIsHotKeySimple(sym, state)) {        // for enter key
