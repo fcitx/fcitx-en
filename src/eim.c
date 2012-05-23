@@ -63,8 +63,6 @@ static boolean
 GoodMatch(const char *current, const char *dictWord);
 static float
 Distance(const char *s1, const char *s2, const int maxOffset);
-const FcitxHotkey FCITX_TAB[2] =
-  { {NULL, FcitxKey_Tab, FcitxKeyState_None}, {NULL, FcitxKey_None, FcitxKeyState_None} };
 const FcitxHotkey FCITX_HYPHEN[2] =
   { {NULL, FcitxKey_minus, FcitxKeyState_None}, {NULL, FcitxKey_None, FcitxKeyState_None} };
 const FcitxHotkey FCITX_APOS[2] =
@@ -173,22 +171,9 @@ FcitxEnDoInput(void *arg, FcitxKeySym sym, unsigned int state)
     }
   } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_ESCAPE)) {
     return IRV_CLEAN;
-  } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_TAB)) {
+  } else {
     if (buf_len == 0)
       return IRV_TO_PROCESS;
-    else if (buf_len > 2) {
-      node *tmp;
-      for (tmp = en->dic; tmp != NULL; tmp = tmp->next) {
-        if (GoodMatch(en->buf, tmp->word)) {
-          int tmp_len = strlen(tmp->word);
-          en->buf = realloc(en->buf, tmp_len + 1);
-          strcpy(en->buf, tmp->word);
-          en->cur = tmp_len;
-          break;
-        }
-      }
-    }
-  } else {
     if (FcitxHotkeyIsHotKeyDigit(sym, state) &&
          FcitxCandidateWordGetListSize(FcitxInputStateGetCandidateList(input)) > 0)
       return IRV_TO_PROCESS;
