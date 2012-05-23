@@ -148,7 +148,7 @@ FcitxEnDoInput(void *arg, FcitxKeySym sym, unsigned int state)
     free(half2);
   } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_BACKSPACE)) {
     if (buf_len == 0)
-      return IRV_TO_PROCESS;    // end
+      return IRV_CLEAN;    // end
     if (en->cur > 0) {
       char *half1 = strndup(en->buf, en->cur - 1);
       char *half2 = strdup(en->buf + en->cur);
@@ -160,7 +160,7 @@ FcitxEnDoInput(void *arg, FcitxKeySym sym, unsigned int state)
     }
   } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_DELETE)) {
     if (buf_len == 0)
-      return IRV_TO_PROCESS;
+      return IRV_CLEAN;
     if (en->cur < buf_len) {
       char *half1 = strndup(en->buf, en->cur);
       char *half2 = strdup(en->buf + en->cur + 1);
@@ -173,7 +173,7 @@ FcitxEnDoInput(void *arg, FcitxKeySym sym, unsigned int state)
     return IRV_CLEAN;
   } else {
     if (buf_len == 0)
-      return IRV_TO_PROCESS;
+      return IRV_CLEAN;
     if (FcitxHotkeyIsHotKeyDigit(sym, state) &&
          FcitxCandidateWordGetListSize(FcitxInputStateGetCandidateList(input)) > 0)
       return IRV_TO_PROCESS;
@@ -191,7 +191,7 @@ FcitxEnDoInput(void *arg, FcitxKeySym sym, unsigned int state)
   if (strlen(en->buf) > 0)
     return IRV_DISPLAY_CANDWORDS;
   else
-    return IRV_TO_PROCESS;
+    return IRV_CLEAN;
 }
 
 __EXPORT_API boolean
