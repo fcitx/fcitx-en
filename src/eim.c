@@ -169,6 +169,17 @@ FcitxEnDoInput(void *arg, FcitxKeySym sym, unsigned int state)
       free(half1);
       free(half2);
     }
+  } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_LSHIFT)) {
+	  node *tmp;
+	  for (tmp = en->dic; tmp != NULL; tmp = tmp->next) {
+		if (GoodMatch(en->buf, tmp->word)) {
+		  int tmp_len = strlen(tmp->word);
+		  en->buf = realloc(en->buf, tmp_len + 1);
+		  strcpy(en->buf, tmp->word);
+		  en->cur = tmp_len;
+		  break;
+		}
+	  }
   } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_ESCAPE)) {
     return IRV_CLEAN;
   } else {
@@ -324,7 +335,7 @@ GoodMatch(const char *current, const char *dictWord)
     char *eqw = strndup(dictWord, buf_len);
     float dist = Distance(current, eqw, 2);        // search around 3 chars
     free(eqw);
-    return dist <= 2.5;
+    return dist < 0.2;
   }
 }
 
@@ -412,5 +423,6 @@ Distance(const char *s1, const char *s2, const int maxOffset)
     }
     c++;
   }
-  return (len1 + len2) / 2 - lcs;
+  float avg = (len1 + len2) / 2;
+  return (avg - lcs) / avg;
 }
