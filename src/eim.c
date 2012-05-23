@@ -170,6 +170,8 @@ FcitxEnDoInput(void *arg, FcitxKeySym sym, unsigned int state)
       free(half2);
     }
   } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_RSHIFT)) {
+	  if (buf_len == 0)
+        return IRV_TO_PROCESS;
 	  node *tmp;
 	  for (tmp = en->dic; tmp != NULL; tmp = tmp->next) {
 		if (GoodMatch(en->buf, tmp->word)) {
