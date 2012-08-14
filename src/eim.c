@@ -20,6 +20,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <ctype.h>
 #include <string.h>
 #include <errno.h>
 #include <fcitx/ime.h>
@@ -263,6 +264,8 @@ __EXPORT_API INPUT_RETURN_VALUE FcitxEnGetCandWords(void *arg)
 	for (tmp = en->dic; tmp != NULL; tmp = tmp->next) {
 		if (GoodMatch(en->buf, tmp->word)) {
 			clist[num].word = strdup(tmp->word);
+                        if (isupper(en->buf[0]))
+                            tmp->word[0] = toupper(tmp->word[0]);
 			clist[num].dist = Distance(en->buf, tmp->word, 2);	// search around 3 chars
 			num++;
 			if (num == CAND_WORD_NUM)
@@ -334,6 +337,8 @@ boolean GoodMatch(const char *current, const char *dictWord)
 		if (dictLen < buf_len - 2 || dictLen > buf_len + 2)
 			return false;
 		char *eqw = strndup(dictWord, buf_len);
+                if (isupper(current[0]))
+                    eqw[0] = toupper(eqw[0]);
 		float dist = Distance(current, eqw, 2);	// search around 3 chars
 		free(eqw);
 		return dist < 0.33;

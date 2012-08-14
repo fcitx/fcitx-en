@@ -23,4 +23,4 @@ msgstr ""
 
 #: /home/march/fcitx-en/build/po/tmp/fcitx-en.conf.in.h:2
 msgid "En"
-msgstr ""
+msgstr "Smart English (US)"
