@@ -265,8 +265,8 @@ __EXPORT_API INPUT_RETURN_VALUE FcitxEnGetCandWords(void *arg)
 		if (GoodMatch(en->buf, tmp->word)) {
 			clist[num].word = strdup(tmp->word);
                         if (isupper(en->buf[0]))
-                            tmp->word[0] = toupper(tmp->word[0]);
-			clist[num].dist = Distance(en->buf, tmp->word, 2);	// search around 3 chars
+                            clist[num].word[0] = toupper(clist[num].word[0]);
+			clist[num].dist = Distance(en->buf, clist[num].word, 2);	// search around 3 chars
 			num++;
 			if (num == CAND_WORD_NUM)
 				break;
