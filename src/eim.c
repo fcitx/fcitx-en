@@ -130,9 +130,9 @@ __EXPORT_API void *FcitxEnCreate(FcitxInstance * instance)
     FcitxInstanceRegisterIMv2(
         instance,
         en,
-        "en",
+        "AutoEnglish",
         _("AutoEnglish"),
-        "en",
+        "fcitx-en",
         iface,
         1,
         "en_US"
