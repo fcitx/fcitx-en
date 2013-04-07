@@ -1,0 +1,7 @@
+[InputMethod]
+UniqueName=autoenglish
+_Name=AutoEnglish
+IconName=en
+Priority=2
+LangCode=en_US
+Parent=fcitx-en

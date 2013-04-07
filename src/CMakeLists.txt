@@ -10,4 +10,7 @@ set( fcitx_en_sources
 
 add_definitions( -DLOCALEDIR=\"${CMAKE_INSTALL_PREFIX}/share/locale\" )
 
-fcitx_add_addon(fcitx-en ${fcitx_en_sources} )
+fcitx_add_addon_full(en
+DESC
+SOURCES ${fcitx_en_sources}
+IM_CONFIG en.conf)

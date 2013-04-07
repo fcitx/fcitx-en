@@ -43,28 +43,34 @@
 #define CAND_WORD_NUM 10
 #define SHORT_WORD_LEN 6
 
-FCITX_EXPORT_API FcitxIMClass ime = {
-	FcitxEnCreate, FcitxEnDestroy
+FCITX_DEFINE_PLUGIN(fcitx_en, ime2, FcitxIMClass2) = {
+    FcitxEnCreate,
+    FcitxEnDestroy,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
 };
 
-FCITX_EXPORT_API int ABI_VERSION = FCITX_ABI_VERSION;
-
 CONFIG_DESC_DEFINE(GetFcitxEnConfigDesc, "fcitx-en.desc")
-static INPUT_RETURN_VALUE
-FcitxEnGetCandWord(void *arg, FcitxCandidateWord * candWord);
+static INPUT_RETURN_VALUE FcitxEnGetCandWord(void *arg, FcitxCandidateWord * candWord);
 static void FcitxEnReloadConfig(void *arg);
 static boolean LoadEnConfig(FcitxEnConfig * fs);
 static void SaveEnConfig(FcitxEnConfig * fs);
 static void ConfigEn(FcitxEn * en);
 static boolean GoodMatch(const char *current, const char *dictWord);
 static float Distance(const char *s1, const char *s2, const int maxOffset);
+
 const FcitxHotkey FCITX_HYPHEN[2] =
-    { {NULL, FcitxKey_minus, FcitxKeyState_None}, {NULL, FcitxKey_None,
-						   FcitxKeyState_None}
+{ {NULL, FcitxKey_minus, FcitxKeyState_None}, {NULL, FcitxKey_None,
+    FcitxKeyState_None}
 };
+
 const FcitxHotkey FCITX_APOS[2] =
-    { {NULL, FcitxKey_apostrophe, FcitxKeyState_None}, {NULL, FcitxKey_None,
-							FcitxKeyState_None}
+{ {NULL, FcitxKey_apostrophe, FcitxKeyState_None}, {NULL, FcitxKey_None,
+    FcitxKeyState_None}
 };
 
 /**
@@ -75,50 +81,64 @@ const FcitxHotkey FCITX_APOS[2] =
  **/
 __EXPORT_API void *FcitxEnCreate(FcitxInstance * instance)
 {
-	if (GetFcitxEnConfigDesc() == NULL)
-		return NULL;
+    if (GetFcitxEnConfigDesc() == NULL)
+        return NULL;
 
-	FcitxEn *en = (FcitxEn *) fcitx_utils_malloc0(sizeof(FcitxEn));
-	FcitxGlobalConfig *config = FcitxInstanceGetGlobalConfig(instance);
-	FcitxInputState *input = FcitxInstanceGetInputState(instance);
-	FcitxCandidateWordSetChoose(FcitxInputStateGetCandidateList(input),
-				    DIGIT_STR_CHOOSE);
+    FcitxEn *en = (FcitxEn *) fcitx_utils_malloc0(sizeof(FcitxEn));
+    FcitxGlobalConfig *config = FcitxInstanceGetGlobalConfig(instance);
+    FcitxInputState *input = FcitxInstanceGetInputState(instance);
+    FcitxCandidateWordSetChoose(FcitxInputStateGetCandidateList(input),
+            DIGIT_STR_CHOOSE);
 
-	bindtextdomain("fcitx-en", LOCALEDIR);
+    bindtextdomain("fcitx-en", LOCALEDIR);
 
-	//load dic
-	FILE *file = fopen(EN_DIC_FILE, "r");
-	if (file == NULL)
-		return NULL;
-	char line[MAX_WORD_LEN];
-	node **tmp = &(en->dic);
-	while (fgets(line, sizeof(line), file) != NULL) {
-		line[strlen(line) - 1] = '\0';	// remove newline
-		*tmp = (node *) malloc(sizeof(node));
-		(*tmp)->word = strdup(line);
-		(*tmp)->next = NULL;
-		tmp = &((*tmp)->next);
-	}
-	fclose(file);
+    //load dic
+    FILE *file = fopen(EN_DIC_FILE, "r");
+    if (file == NULL)
+        return NULL;
+    char line[MAX_WORD_LEN];
+    node **tmp = &(en->dic);
+    while (fgets(line, sizeof(line), file) != NULL) {
+        line[strlen(line) - 1] = '\0';	// remove newline
+        *tmp = (node *) malloc(sizeof(node));
+        (*tmp)->word = strdup(line);
+        (*tmp)->next = NULL;
+        tmp = &((*tmp)->next);
+    }
+    fclose(file);
 
-	en->owner = instance;
-	en->cur = 0;
-	en->buf = strdup("");
-	FcitxCandidateWordSetPageSize(FcitxInputStateGetCandidateList(input),
-				      config->iMaxCandWord);
-	LoadEnConfig(&en->config);
-	ConfigEn(en);
+    en->owner = instance;
+    en->cur = 0;
+    en->buf = strdup("");
+    FcitxCandidateWordSetPageSize(FcitxInputStateGetCandidateList(input),
+            config->iMaxCandWord);
+    LoadEnConfig(&en->config);
+    ConfigEn(en);
+    
+    
+    FcitxIMIFace iface;
+    memset(&iface, 0, sizeof(FcitxIMIFace));
+    iface.Init = FcitxEnInit;
+    iface.ResetIM = FcitxEnReset;
+    iface.DoInput = FcitxEnDoInput;
+    iface.GetCandWords = FcitxEnGetCandWords;
+    iface.Save = NULL;
+    iface.ReloadConfig = FcitxEnReloadConfig;
+    //iface.OnClose = NULL;
+    //iface.KeyBlocker = NULL;
 
-	FcitxInstanceRegisterIM(instance,
-				en,
-				"en",
-				_("En"),
-				"en",
-				FcitxEnInit,
-				FcitxEnReset,
-				FcitxEnDoInput, FcitxEnGetCandWords, NULL, NULL,
-				FcitxEnReloadConfig, NULL, 2, "en_US");
-	return en;
+    FcitxInstanceRegisterIMv2(
+        instance,
+        en,
+        "en",
+        _("AutoEnglish"),
+        "en",
+        iface,
+        1,
+        "en_US"
+    );
+    
+    return en;
 }
 
 /**
@@ -129,108 +149,108 @@ __EXPORT_API void *FcitxEnCreate(FcitxInstance * instance)
  * @param count count from XKeyEvent
  * @return INPUT_RETURN_VALUE
  **/
-__EXPORT_API INPUT_RETURN_VALUE
+    __EXPORT_API INPUT_RETURN_VALUE
 FcitxEnDoInput(void *arg, FcitxKeySym sym, unsigned int state)
 {
-	FcitxEn *en = (FcitxEn *) arg;
-	FcitxInputState *input = FcitxInstanceGetInputState(en->owner);
-	int buf_len = strlen(en->buf);
+    FcitxEn *en = (FcitxEn *) arg;
+    FcitxInputState *input = FcitxInstanceGetInputState(en->owner);
+    int buf_len = strlen(en->buf);
 
-	FcitxCandidateWordList *candList =
-	    FcitxInputStateGetCandidateList(input);
-	if (buf_len > 0 && FcitxCandidateWordGetListSize(candList) > 0) {
-		if (FcitxHotkeyIsHotKeyDigit(sym, state)
-		    || FcitxHotkeyIsHotKey(sym, state, FCITX_RIGHT)
-		    || FcitxHotkeyIsHotKey(sym, state, FCITX_LEFT))
-			return IRV_TO_PROCESS;
-	}
+    FcitxCandidateWordList *candList =
+        FcitxInputStateGetCandidateList(input);
+    if (buf_len > 0 && FcitxCandidateWordGetListSize(candList) > 0) {
+        if (FcitxHotkeyIsHotKeyDigit(sym, state)
+                || FcitxHotkeyIsHotKey(sym, state, FCITX_RIGHT)
+                || FcitxHotkeyIsHotKey(sym, state, FCITX_LEFT))
+            return IRV_TO_PROCESS;
+    }
 
-	if (FcitxHotkeyIsHotKeyLAZ(sym, state)
-	    || FcitxHotkeyIsHotKeyUAZ(sym, state)
-	    || FcitxHotkeyIsHotKey(sym, state, FCITX_HYPHEN)
-	    || FcitxHotkeyIsHotKey(sym, state, FCITX_APOS)) {
-		char in = (char)sym & 0xff;
-		char *half1 = strndup(en->buf, en->cur);
-		char *half2 = strdup(en->buf + en->cur);
-		en->buf = realloc(en->buf, buf_len + 2);
-		sprintf(en->buf, "%s%c%s", half1, in, half2);
-		en->cur++;
-		free(half1);
-		free(half2);
-	} else if (FcitxHotkeyIsHotKey(sym, state, FCITX_LEFT)) {
-		if (en->cur > 0)
-			en->cur--;
-		else
-			return IRV_TO_PROCESS;
-	} else if (FcitxHotkeyIsHotKey(sym, state, FCITX_RIGHT)) {
-		if (en->cur < buf_len)
-			en->cur++;
-		else
-			return IRV_TO_PROCESS;
-	} else if (FcitxHotkeyIsHotKey(sym, state, FCITX_BACKSPACE)) {
-		if (buf_len == 0)
-			return IRV_TO_PROCESS;	// end
-		if (en->cur > 0) {
-			char *half1 = strndup(en->buf, en->cur - 1);
-			char *half2 = strdup(en->buf + en->cur);
-			en->buf = realloc(en->buf, buf_len);
-			sprintf(en->buf, "%s%s", half1, half2);
-			en->cur--;
-			free(half1);
-			free(half2);
-		}
-	} else if (FcitxHotkeyIsHotKey(sym, state, FCITX_DELETE)) {
-		if (buf_len == 0)
-			return IRV_TO_PROCESS;
-		if (en->cur < buf_len) {
-			char *half1 = strndup(en->buf, en->cur);
-			char *half2 = strdup(en->buf + en->cur + 1);
-			en->buf = realloc(en->buf, buf_len);
-			sprintf(en->buf, "%s%s", half1, half2);
-			free(half1);
-			free(half2);
-		}
-	} else if (FcitxHotkeyIsHotKey(sym, state, FCITX_ESCAPE)) {
-		return IRV_CLEAN;
-	} else {
-		if (buf_len == 0)
-			return IRV_TO_PROCESS;
-		// sym is symbol, or enter, so it is the end of word
-		if (FcitxHotkeyIsHotKeySimple(sym, state)) {	// for enter key
-			char in = (char)sym & 0xff;
-			char *old = strdup(en->buf);
-			en->buf = realloc(en->buf, buf_len + 2);
-			sprintf(en->buf, "%s%c", old, in);
-			free(old);
-		}
-		strcpy(FcitxInputStateGetOutputString(input), en->buf);
-		return IRV_COMMIT_STRING;
-	}
-	return IRV_DISPLAY_CANDWORDS;
+    if (FcitxHotkeyIsHotKeyLAZ(sym, state)
+            || FcitxHotkeyIsHotKeyUAZ(sym, state)
+            || FcitxHotkeyIsHotKey(sym, state, FCITX_HYPHEN)
+            || FcitxHotkeyIsHotKey(sym, state, FCITX_APOS)) {
+        char in = (char)sym & 0xff;
+        char *half1 = strndup(en->buf, en->cur);
+        char *half2 = strdup(en->buf + en->cur);
+        en->buf = realloc(en->buf, buf_len + 2);
+        sprintf(en->buf, "%s%c%s", half1, in, half2);
+        en->cur++;
+        free(half1);
+        free(half2);
+    } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_LEFT)) {
+        if (en->cur > 0)
+            en->cur--;
+        else
+            return IRV_TO_PROCESS;
+    } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_RIGHT)) {
+        if (en->cur < buf_len)
+            en->cur++;
+        else
+            return IRV_TO_PROCESS;
+    } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_BACKSPACE)) {
+        if (buf_len == 0)
+            return IRV_TO_PROCESS;	// end
+        if (en->cur > 0) {
+            char *half1 = strndup(en->buf, en->cur - 1);
+            char *half2 = strdup(en->buf + en->cur);
+            en->buf = realloc(en->buf, buf_len);
+            sprintf(en->buf, "%s%s", half1, half2);
+            en->cur--;
+            free(half1);
+            free(half2);
+        }
+    } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_DELETE)) {
+        if (buf_len == 0)
+            return IRV_TO_PROCESS;
+        if (en->cur < buf_len) {
+            char *half1 = strndup(en->buf, en->cur);
+            char *half2 = strdup(en->buf + en->cur + 1);
+            en->buf = realloc(en->buf, buf_len);
+            sprintf(en->buf, "%s%s", half1, half2);
+            free(half1);
+            free(half2);
+        }
+    } else if (FcitxHotkeyIsHotKey(sym, state, FCITX_ESCAPE)) {
+        return IRV_CLEAN;
+    } else {
+        if (buf_len == 0)
+            return IRV_TO_PROCESS;
+        // sym is symbol, or enter, so it is the end of word
+        if (FcitxHotkeyIsHotKeySimple(sym, state)) {	// for enter key
+            char in = (char)sym & 0xff;
+            char *old = strdup(en->buf);
+            en->buf = realloc(en->buf, buf_len + 2);
+            sprintf(en->buf, "%s%c", old, in);
+            free(old);
+        }
+        strcpy(FcitxInputStateGetOutputString(input), en->buf);
+        return IRV_COMMIT_STRING;
+    }
+    return IRV_DISPLAY_CANDWORDS;
 }
 
 __EXPORT_API boolean FcitxEnInit(void *arg)
 {
-	FcitxEn *en = (FcitxEn *) arg;
-	FcitxInstanceSetContext(en->owner, CONTEXT_IM_KEYBOARD_LAYOUT, "us");
-	FcitxInstanceSetContext(en->owner, CONTEXT_ALTERNATIVE_PREVPAGE_KEY,
-				FCITX_LEFT);
-	FcitxInstanceSetContext(en->owner, CONTEXT_ALTERNATIVE_NEXTPAGE_KEY,
-				FCITX_RIGHT);
-	return true;
+    FcitxEn *en = (FcitxEn *) arg;
+    FcitxInstanceSetContext(en->owner, CONTEXT_IM_KEYBOARD_LAYOUT, "us");
+    FcitxInstanceSetContext(en->owner, CONTEXT_ALTERNATIVE_PREVPAGE_KEY,
+            FCITX_LEFT);
+    FcitxInstanceSetContext(en->owner, CONTEXT_ALTERNATIVE_NEXTPAGE_KEY,
+            FCITX_RIGHT);
+    return true;
 }
 
 __EXPORT_API void FcitxEnReset(void *arg)
 {
-	FcitxEn *en = (FcitxEn *) arg;
-	en->cur = 0;
-	free(en->buf);
-	en->buf = strdup("");
+    FcitxEn *en = (FcitxEn *) arg;
+    en->cur = 0;
+    free(en->buf);
+    en->buf = strdup("");
 }
 
-int compare(const void *a, const void *b)
+static int compare(const void *a, const void *b)
 {
-	return (int)(((cword *) a)->dist - ((cword *) b)->dist);
+    return (int)(((cword *) a)->dist - ((cword *) b)->dist);
 }
 
 /**
@@ -241,71 +261,71 @@ int compare(const void *a, const void *b)
  **/
 __EXPORT_API INPUT_RETURN_VALUE FcitxEnGetCandWords(void *arg)
 {
-	FcitxEn *en = (FcitxEn *) arg;
-	FcitxInputState *input = FcitxInstanceGetInputState(en->owner);
-	FcitxMessages *msgPreedit = FcitxInputStateGetPreedit(input);
-	FcitxMessages *clientPreedit = FcitxInputStateGetClientPreedit(input);
-	FcitxGlobalConfig *config = FcitxInstanceGetGlobalConfig(en->owner);
+    FcitxEn *en = (FcitxEn *) arg;
+    FcitxInputState *input = FcitxInstanceGetInputState(en->owner);
+    FcitxMessages *msgPreedit = FcitxInputStateGetPreedit(input);
+    FcitxMessages *clientPreedit = FcitxInputStateGetClientPreedit(input);
+    FcitxGlobalConfig *config = FcitxInstanceGetGlobalConfig(en->owner);
 
-	FcitxCandidateWordSetPageSize(FcitxInputStateGetCandidateList(input),
-				      config->iMaxCandWord);
+    FcitxCandidateWordSetPageSize(FcitxInputStateGetCandidateList(input),
+            config->iMaxCandWord);
 
-	//clean up window asap
-	FcitxInstanceCleanInputWindow(en->owner);
+    //clean up window asap
+    FcitxInstanceCleanInputWindow(en->owner);
 
-	ConfigEn(en);
+    ConfigEn(en);
 
-	FcitxLog(DEBUG, "buf: %s", en->buf);
-	int buf_len = strlen(en->buf);
+    FcitxLog(DEBUG, "buf: %s", en->buf);
+    int buf_len = strlen(en->buf);
 
-	node *tmp;
-	cword *clist = (cword *) malloc(sizeof(cword) * CAND_WORD_NUM);
-	int num = 0;
-	for (tmp = en->dic; tmp != NULL; tmp = tmp->next) {
-		if (GoodMatch(en->buf, tmp->word)) {
-			clist[num].word = strdup(tmp->word);
-                        if (isupper(en->buf[0]))
-                            clist[num].word[0] = toupper(clist[num].word[0]);
-			clist[num].dist = Distance(en->buf, clist[num].word, 2);	// search around 3 chars
-			num++;
-			if (num == CAND_WORD_NUM)
-				break;
-		}
-	}
-	if (buf_len > SHORT_WORD_LEN)
-		qsort((void *)clist, num, sizeof(cword), compare);
-	int i;
-	for (i = 0; i < num; i++) {
-		FcitxCandidateWord cw;
-		cw.callback = FcitxEnGetCandWord;
-		cw.owner = en;
-		cw.priv = NULL;
-		cw.strExtra = NULL;
-		cw.strWord = clist[i].word;
-		cw.wordType = MSG_OTHER;
-		FcitxCandidateWordAppend(FcitxInputStateGetCandidateList(input),
-					 &cw);
-	}
-	free(clist);
+    node *tmp;
+    cword *clist = (cword *) malloc(sizeof(cword) * CAND_WORD_NUM);
+    int num = 0;
+    for (tmp = en->dic; tmp != NULL; tmp = tmp->next) {
+        if (GoodMatch(en->buf, tmp->word)) {
+            clist[num].word = strdup(tmp->word);
+            if (isupper(en->buf[0]))
+                clist[num].word[0] = toupper(clist[num].word[0]);
+            clist[num].dist = Distance(en->buf, clist[num].word, 2);	// search around 3 chars
+            num++;
+            if (num == CAND_WORD_NUM)
+                break;
+        }
+    }
+    if (buf_len > SHORT_WORD_LEN)
+        qsort((void *)clist, num, sizeof(cword), compare);
+    int i;
+    for (i = 0; i < num; i++) {
+        FcitxCandidateWord cw;
+        cw.callback = FcitxEnGetCandWord;
+        cw.owner = en;
+        cw.priv = NULL;
+        cw.strExtra = NULL;
+        cw.strWord = clist[i].word; // free by fcitx
+        cw.wordType = MSG_OTHER;
+        FcitxCandidateWordAppend(FcitxInputStateGetCandidateList(input),
+                &cw);
+    }
+    free(clist);
 
-	// setup cursor
-	FcitxInputStateSetShowCursor(input, true);
-	FcitxInputStateSetCursorPos(input, en->cur);
-	FcitxInputStateSetClientCursorPos(input, en->cur);
+    // setup cursor
+    FcitxInputStateSetShowCursor(input, true);
+    FcitxInputStateSetCursorPos(input, en->cur);
+    FcitxInputStateSetClientCursorPos(input, en->cur);
 
-	FcitxMessagesAddMessageAtLast(msgPreedit, MSG_INPUT, "%s", en->buf);
-	FcitxMessagesAddMessageAtLast(clientPreedit, MSG_INPUT, "%s", en->buf);
+    FcitxMessagesAddMessageAtLast(msgPreedit, MSG_INPUT, "%s", en->buf);
+    FcitxMessagesAddMessageAtLast(clientPreedit, MSG_OTHER, "%s", en->buf);
 
-	return IRV_DISPLAY_CANDWORDS;
+    return IRV_DISPLAY_CANDWORDS;
 }
 
 INPUT_RETURN_VALUE FcitxEnGetCandWord(void *arg, FcitxCandidateWord * candWord)
 {
-	FcitxEn *en = (FcitxEn *) candWord->owner;
-	FcitxInputState *input = FcitxInstanceGetInputState(en->owner);
-	FcitxLog(DEBUG, "selected candword: %s", candWord->strWord);
-	strcpy(FcitxInputStateGetOutputString(input), candWord->strWord);
-	return IRV_COMMIT_STRING;
+    FcitxEn *en = (FcitxEn *) candWord->owner;
+    FcitxInputState *input = FcitxInstanceGetInputState(en->owner);
+    FcitxLog(DEBUG, "selected candword: %s", candWord->strWord);
+    strcpy(FcitxInputStateGetOutputString(input), candWord->strWord);
+    return IRV_COMMIT_STRING;
 }
 
 /**
@@ -315,118 +335,95 @@ INPUT_RETURN_VALUE FcitxEnGetCandWord(void *arg, FcitxCandidateWord * candWord)
  **/
 __EXPORT_API void FcitxEnDestroy(void *arg)
 {
-	FcitxEn *en = (FcitxEn *) arg;
-	free(en->buf);
-	node *tmp = en->dic;
-	while (tmp != NULL) {
-		free(tmp->word);
-		node *next = tmp->next;
-		free(tmp);
-		tmp = next;
-	}
-	free(arg);
+    FcitxEn *en = (FcitxEn *) arg;
+    free(en->buf);
+    node *tmp = en->dic;
+    while (tmp != NULL) {
+        free(tmp->word);
+        node *next = tmp->next;
+        free(tmp);
+        tmp = next;
+    }
+    free(arg);
 }
 
-boolean GoodMatch(const char *current, const char *dictWord)
+static boolean GoodMatch(const char *current, const char *dictWord)
 {
-	int buf_len = strlen(current);
-	if (buf_len <= SHORT_WORD_LEN)
-		return strncasecmp(current, dictWord, buf_len) == 0;
-	else {
-		int dictLen = strlen(dictWord);
-		if (dictLen < buf_len - 2 || dictLen > buf_len + 2)
-			return false;
-		char *eqw = strndup(dictWord, buf_len);
-                if (isupper(current[0]))
-                    eqw[0] = toupper(eqw[0]);
-		float dist = Distance(current, eqw, 2);	// search around 3 chars
-		free(eqw);
-		return dist < 0.33;
-	}
+    int buf_len = strlen(current);
+    if (buf_len <= SHORT_WORD_LEN)
+        return strncasecmp(current, dictWord, buf_len) == 0;
+    else {
+        int dictLen = strlen(dictWord);
+        if (dictLen < buf_len - 2 || dictLen > buf_len + 2)
+            return false;
+        char *eqw = strndup(dictWord, buf_len);
+        if (isupper(current[0]))
+            eqw[0] = toupper(eqw[0]);
+        float dist = Distance(current, eqw, 2);	// search around 3 chars
+        free(eqw);
+        return dist < 0.33;
+    }
 }
 
-void FcitxEnReloadConfig(void *arg)
+static float Distance(const char *s1, const char *s2, const int maxOffset)
 {
-	FcitxEn *en = (FcitxEn *) arg;
-	LoadEnConfig(&en->config);
-	ConfigEn(en);
+    int len1 = strlen(s1);
+    int len2 = strlen(s2);
+    if (len1 == 0)
+        return len2 == 0 ? 0 : len2;
+    if (len2 == 0)
+        return len1;
+    int c = 0;
+    int offset1 = 0;
+    int offset2 = 0;
+    int lcs = 0;
+    while ((c + offset1 < len1)
+            && (c + offset2 < len2)) {
+        if (s1[c + offset1] == s2[c + offset2])
+            lcs++;
+        else {
+            offset1 = 0;
+            offset2 = 0;
+            int i;
+            for (i = 0; i < maxOffset; i++) {
+                if ((c + i < len1)
+                        && (s1[c + i] == s2[c])) {
+                    offset1 = i;
+                    break;
+                }
+                if ((c + i < len2)
+                        && (s1[c] == s2[c + i])) {
+                    offset2 = i;
+                    break;
+                }
+            }
+        }
+        c++;
+    }
+    float avg = (len1 + len2) / 2;
+    return (avg - lcs) / avg;
+}
+
+
+static void FcitxEnReloadConfig(void *arg)
+{
+    FcitxEn *en = (FcitxEn *) arg;
+    LoadEnConfig(&en->config);
+    ConfigEn(en);
 }
 
 boolean LoadEnConfig(FcitxEnConfig * fs)
 {
-	FcitxConfigFileDesc *configDesc = GetFcitxEnConfigDesc();
-	if (!configDesc)
-		return false;
-
-	FILE *fp =
-	    FcitxXDGGetFileUserWithPrefix("conf", "fcitx-en.config", "rt",
-					  NULL);
-
-	if (!fp) {
-		if (errno == ENOENT)
-			SaveEnConfig(fs);
-	}
-	FcitxConfigFile *cfile = FcitxConfigParseConfigFileFp(fp, configDesc);
-
-	FcitxEnConfigConfigBind(fs, cfile, configDesc);
-	FcitxConfigBindSync(&fs->config);
-
-	if (fp)
-		fclose(fp);
-	return true;
+    // none at the moment
+    return true;
 }
 
 void SaveEnConfig(FcitxEnConfig * fc)
 {
-	FcitxConfigFileDesc *configDesc = GetFcitxEnConfigDesc();
-	FILE *fp =
-	    FcitxXDGGetFileUserWithPrefix("conf", "fcitx-en.config", "wt",
-					  NULL);
-	FcitxConfigSaveConfigFileFp(fp, &fc->config, configDesc);
-	if (fp)
-		fclose(fp);
+    // none at the moment
 }
 
 void ConfigEn(FcitxEn * en)
 {
-	// none at the moment
-}
-
-float Distance(const char *s1, const char *s2, const int maxOffset)
-{
-	int len1 = strlen(s1);
-	int len2 = strlen(s2);
-	if (len1 == 0)
-		return len2 == 0 ? 0 : len2;
-	if (len2 == 0)
-		return len1;
-	int c = 0;
-	int offset1 = 0;
-	int offset2 = 0;
-	int lcs = 0;
-	while ((c + offset1 < len1)
-	       && (c + offset2 < len2)) {
-		if (s1[c + offset1] == s2[c + offset2])
-			lcs++;
-		else {
-			offset1 = 0;
-			offset2 = 0;
-			int i;
-			for (i = 0; i < maxOffset; i++) {
-				if ((c + i < len1)
-				    && (s1[c + i] == s2[c])) {
-					offset1 = i;
-					break;
-				}
-				if ((c + i < len2)
-				    && (s1[c] == s2[c + i])) {
-					offset2 = i;
-					break;
-				}
-			}
-		}
-		c++;
-	}
-	float avg = (len1 + len2) / 2;
-	return (avg - lcs) / avg;
+    // none at the moment
 }

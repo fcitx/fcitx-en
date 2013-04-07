@@ -1,0 +1,9 @@
+[Addon]
+Name=fcitx-en
+_GeneralName=AutoEnglish
+_Comment=Fcitx English Input Method
+Category=InputMethod
+Enabled=True
+Library=fcitx-en.so
+Type=SharedLibrary
+IMRegisterMethod=ConfigFile
