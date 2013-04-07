@@ -51,7 +51,7 @@ typedef struct _node {
 
 typedef struct _cword {
     char *word;
-    float dist;
+    double dist;
 } cword;
 
 typedef struct _FcitxEn {
@@ -60,6 +60,7 @@ typedef struct _FcitxEn {
     node *dic;
     char *buf;
     int cur;
+    boolean selectMode;
 } FcitxEn;
 
 CONFIG_BINDING_DECLARE(FcitxEnConfig);
